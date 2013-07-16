@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2012, John Hurst
+Copyright (c) 2004-2013, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_DCData_internal.h
-    \version $Id:  $
+    \version $Id: AS_DCP_DCData_internal.h,v 1.2 2013/06/03 00:12:31 jhurst Exp $
     \brief   AS-DCP library, non-public common DCData reader and writer implementation
 */
 
@@ -65,7 +65,7 @@ namespace DCData
     Result_t    MD_to_DCData_DDesc(DCData::DCDataDescriptor& DDesc);
   };
 
-  class h__Writer : public ASDCP::h__Writer
+  class h__Writer : public ASDCP::h__ASDCPWriter
   {
     ASDCP_NO_COPY_CONSTRUCT(h__Writer);
     h__Writer();
@@ -74,7 +74,7 @@ namespace DCData
     DCDataDescriptor m_DDesc;
     byte_t           m_EssenceUL[SMPTE_UL_LENGTH];
 
-    h__Writer(const Dictionary& d) : ASDCP::h__Writer(d) {
+    h__Writer(const Dictionary& d) : ASDCP::h__ASDCPWriter(d) {
       memset(m_EssenceUL, 0, SMPTE_UL_LENGTH);
     }
 

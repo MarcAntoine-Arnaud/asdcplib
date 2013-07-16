@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2012, John Hurst
+Copyright (c) 2005-2013, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.h
-    \version $Id: MXF.h,v 1.43 2012/03/16 00:28:23 jhurst Exp $
+    \version $Id: MXF.h,v 1.51 2013/07/02 15:35:40 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -33,6 +33,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _MXF_H_
 
 #include "MXFTypes.h"
+#include <algorithm>
 
 namespace ASDCP
 {
@@ -217,7 +218,29 @@ namespace ASDCP
 	  virtual void     Dump(FILE* = 0);
 	};
 
+      // wrapper object manages optional properties
+      template <class PropertyType>
+	class optional_property
+	{
+	  PropertyType m_property;
+	  bool m_has_value;
 
+	public:
+	optional_property() : m_has_value(false) {}
+	optional_property(const PropertyType& value) : m_property(value), m_has_value(false) {}
+	  const optional_property<PropertyType>& operator=(const PropertyType& rhs) { this->m_property = rhs; this->m_has_value = true; return *this; }
+	  bool operator==(const PropertyType& rhs) const { return this->m_property == rhs; }
+	  bool operator==(const optional_property<PropertyType>& rhs) const { return this->m_property == rhs.m_property; }
+	  operator PropertyType&() { return this->m_property; }
+	  void set(const PropertyType& rhs) { this->m_property = rhs; this->m_has_value = true; }
+	  void set_has_value(bool has_value = true) { this->m_has_value = has_value; }
+	  void reset(const PropertyType& rhs) { this->m_has_value = false; }
+	  bool empty() const { return ! m_has_value; }
+	  PropertyType& get() { return m_property; }
+	  const PropertyType& const_get() const { return m_property; }
+	};
+
+      // base class of all metadata objects
       //
       class InterchangeObject : public ASDCP::KLVPacket
 	{
@@ -227,7 +250,7 @@ namespace ASDCP
 	  const Dictionary*& m_Dict;
 	  IPrimerLookup* m_Lookup;
 	  UUID           InstanceUID;
-	  UUID           GenerationUID;
+	  optional_property<UUID>  GenerationUID;
 
 	InterchangeObject(const Dictionary*& d) : m_Dict(d), m_Lookup(0) {}
 	  virtual ~InterchangeObject() {}
@@ -243,6 +266,9 @@ namespace ASDCP
 	};
 
       //
+      typedef std::list<InterchangeObject*> InterchangeObject_list_t;
+
+      //
       class Preface : public InterchangeObject
 	{
 	  ASDCP_NO_COPY_CONSTRUCT(Preface);
@@ -252,13 +278,14 @@ namespace ASDCP
 	  const Dictionary*& m_Dict;
 	  Kumu::Timestamp    LastModifiedDate;
 	  ui16_t       Version;
-	  ui32_t       ObjectModelVersion;
-	  UUID         PrimaryPackage;
+	  optional_property<ui32_t> ObjectModelVersion;
+	  optional_property<UUID> PrimaryPackage;
 	  Batch<UUID>  Identifications;
 	  UUID         ContentStorage;
 	  UL           OperationalPattern;
 	  Batch<UL>    EssenceContainers;
 	  Batch<UL>    DMSchemes;
+	  optional_property<Batch<UL> > ApplicationSchemes;
 
 	  Preface(const Dictionary*& d);
 	  virtual ~Preface() {}
@@ -321,6 +348,8 @@ namespace ASDCP
 	    };
 
 	  const Dictionary*& m_Dict;
+	  ui64_t  RtFileOffset; // not part of the MXF structure: used to manage runtime index access 
+	  ui64_t  RtEntryOffset;
 
 	  Rational    IndexEditRate;
 	  ui64_t      IndexStartPosition;
@@ -350,21 +379,19 @@ namespace ASDCP
       class SourcePackage;
 
       //
-      class OPAtomHeader : public Partition
+      class OP1aHeader : public Partition
 	{
-	  ASDCP_NO_COPY_CONSTRUCT(OPAtomHeader);
-	  OPAtomHeader();
+	  Kumu::ByteString m_HeaderData;
+	  ASDCP_NO_COPY_CONSTRUCT(OP1aHeader);
+	  OP1aHeader();
 
 	public:
-	  const Dictionary*&   m_Dict;
-	  ASDCP::MXF::RIP     m_RIP;
+	  const Dictionary*&  m_Dict;
 	  ASDCP::MXF::Primer  m_Primer;
 	  Preface*            m_Preface;
-	  ASDCP::FrameBuffer  m_Buffer;
-	  bool                m_HasRIP;
 
-	  OPAtomHeader(const Dictionary*&);
-	  virtual ~OPAtomHeader();
+	  OP1aHeader(const Dictionary*&);
+	  virtual ~OP1aHeader();
 	  virtual Result_t InitFromFile(const Kumu::FileReader& Reader);
 	  virtual Result_t InitFromPartitionBuffer(const byte_t* p, ui32_t l);
 	  virtual Result_t InitFromBuffer(const byte_t* p, ui32_t l);
@@ -373,7 +400,6 @@ namespace ASDCP
 	  virtual Result_t GetMDObjectByID(const UUID&, InterchangeObject** = 0);
 	  virtual Result_t GetMDObjectByType(const byte_t*, InterchangeObject** = 0);
 	  virtual Result_t GetMDObjectsByType(const byte_t* ObjectID, std::list<InterchangeObject*>& ObjectList);
-	  virtual ASDCP::MXF::RIP& GetRIP();
 	  Identification*  GetIdentification();
 	  SourcePackage*   GetSourcePackage();
 	};
@@ -381,8 +407,8 @@ namespace ASDCP
       //
       class OPAtomIndexFooter : public Partition
 	{
+	  Kumu::ByteString    m_FooterData;
 	  IndexTableSegment*  m_CurrentSegment;
-	  ASDCP::FrameBuffer  m_Buffer;
 	  ui32_t              m_BytesPerEditUnit;
 	  Rational            m_EditRate;
 	  ui32_t              m_BodySID;
@@ -411,6 +437,56 @@ namespace ASDCP
 	  virtual void     PushIndexEntry(const IndexTableSegment::IndexEntry&);
 	  virtual void     SetIndexParamsCBR(IPrimerLookup* lookup, ui32_t size, const Rational& Rate);
 	  virtual void     SetIndexParamsVBR(IPrimerLookup* lookup, const Rational& Rate, Kumu::fpos_t offset);
+	};
+
+      //---------------------------------------------------------------------------------
+      //
+
+      //
+      inline std::string to_lower(std::string str) {
+	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+      }
+
+      // ignore case when searching for audio labels
+      struct ci_comp
+      {
+	inline bool operator()(const std::string& a, const std::string& b) const {
+	  return to_lower(a) < to_lower(b);
+	}
+      };
+
+      typedef std::map<const std::string, const UL, ci_comp> mca_label_map_t;
+      bool decode_mca_string(const std::string& s, const mca_label_map_t& labels, const Dictionary& dict, const std::string& language, InterchangeObject_list_t&, ui32_t&);
+
+      //
+      class ASDCP_MCAConfigParser : public InterchangeObject_list_t
+	{
+	  KM_NO_COPY_CONSTRUCT(ASDCP_MCAConfigParser);
+	  ASDCP_MCAConfigParser();
+
+	protected:
+	  mca_label_map_t m_LabelMap;
+	  ui32_t m_ChannelCount;
+	  const Dictionary*& m_Dict;
+
+	  
+	public:
+	  ASDCP_MCAConfigParser(const Dictionary*&);
+	  bool DecodeString(const std::string& s, const std::string& language = "en");
+
+	  // Valid only after a successful call to DecodeString
+	  ui32_t ChannelCount() const;
+	};
+
+      //
+      class AS02_MCAConfigParser : public ASDCP_MCAConfigParser
+	{
+	  KM_NO_COPY_CONSTRUCT(AS02_MCAConfigParser);
+	  AS02_MCAConfigParser();
+	  
+	public:
+	  AS02_MCAConfigParser(const Dictionary*&);
 	};
 
     } // namespace MXF

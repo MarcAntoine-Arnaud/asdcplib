@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2012, John Hurst
+Copyright (c) 2005-2013, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.cpp
-    \version $Id: MXF.cpp,v 1.64 2012/03/16 19:27:45 jhurst Exp $
+    \version $Id: MXF.cpp,v 1.72 2013/07/02 02:05:16 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -58,7 +58,7 @@ ASDCP::MXF::SeekToRIP(const Kumu::FileReader& Reader)
   if ( ASDCP_SUCCESS(result)
        && end_pos < (SMPTE_UL_LENGTH+MXF_BER_LENGTH) )
     {
-      DefaultLogSink().Error("File is smaller than an KLV empty packet.\n");
+      DefaultLogSink().Error("File is smaller than an empty KLV packet.\n");
       result = RESULT_FAIL;
     }
 
@@ -586,10 +586,11 @@ ASDCP::MXF::Primer::Dump(FILE* stream)
 
 //
 ASDCP::MXF::Preface::Preface(const Dictionary*& d) :
-  InterchangeObject(d), m_Dict(d), Version(258), ObjectModelVersion(0)
+  InterchangeObject(d), m_Dict(d), Version(258)
 {
   assert(m_Dict);
   m_UL = m_Dict->Type(MDD_Preface).ul;
+  ObjectModelVersion = 0;
 }
 
 //
@@ -616,8 +617,8 @@ ASDCP::MXF::Preface::InitFromTLVSet(TLVReader& TLVSet)
   Result_t result = InterchangeObject::InitFromTLVSet(TLVSet);
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS(Preface, LastModifiedDate));
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadUi16(OBJ_READ_ARGS(Preface, Version));
-  if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadUi32(OBJ_READ_ARGS(Preface, ObjectModelVersion));
-  if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS(Preface, PrimaryPackage));
+  if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadUi32(OBJ_READ_ARGS_OPT(Preface, ObjectModelVersion));
+  if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS_OPT(Preface, PrimaryPackage));
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS(Preface, Identifications));
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS(Preface, ContentStorage));
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.ReadObject(OBJ_READ_ARGS(Preface, OperationalPattern));
@@ -633,8 +634,8 @@ ASDCP::MXF::Preface::WriteToTLVSet(TLVWriter& TLVSet)
   Result_t result = InterchangeObject::WriteToTLVSet(TLVSet);
   if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS(Preface, LastModifiedDate));
   if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteUi16(OBJ_WRITE_ARGS(Preface, Version));
-  if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteUi32(OBJ_WRITE_ARGS(Preface, ObjectModelVersion));
-  if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS(Preface, PrimaryPackage));
+  if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteUi32(OBJ_WRITE_ARGS_OPT(Preface, ObjectModelVersion));
+  if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS_OPT(Preface, PrimaryPackage));
   if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS(Preface, Identifications));
   if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS(Preface, ContentStorage));
   if ( ASDCP_SUCCESS(result) )  result = TLVSet.WriteObject(OBJ_WRITE_ARGS(Preface, OperationalPattern));
@@ -669,8 +670,13 @@ ASDCP::MXF::Preface::Dump(FILE* stream)
   InterchangeObject::Dump(stream);
   fprintf(stream, "  %22s = %s\n",  "LastModifiedDate", LastModifiedDate.EncodeString(identbuf, IdentBufferLen));
   fprintf(stream, "  %22s = %hu\n", "Version", Version);
-  fprintf(stream, "  %22s = %u\n",  "ObjectModelVersion", ObjectModelVersion);
-  fprintf(stream, "  %22s = %s\n",  "PrimaryPackage", PrimaryPackage.EncodeHex(identbuf, IdentBufferLen));
+
+  if ( ! ObjectModelVersion.empty() )
+    fprintf(stream, "  %22s = %u\n",  "ObjectModelVersion", ObjectModelVersion.get());
+
+  if ( ! PrimaryPackage.empty() )
+    fprintf(stream, "  %22s = %s\n",  "PrimaryPackage", PrimaryPackage.get().EncodeHex(identbuf, IdentBufferLen));
+
   fprintf(stream, "  %22s:\n", "Identifications");  Identifications.Dump(stream);
   fprintf(stream, "  %22s = %s\n",  "ContentStorage", ContentStorage.EncodeHex(identbuf, IdentBufferLen));
   fprintf(stream, "  %22s = %s\n",  "OperationalPattern", OperationalPattern.EncodeString(identbuf, IdentBufferLen));
@@ -681,92 +687,29 @@ ASDCP::MXF::Preface::Dump(FILE* stream)
 //------------------------------------------------------------------------------------------
 //
 
-ASDCP::MXF::OPAtomHeader::OPAtomHeader(const Dictionary*& d) : Partition(d), m_Dict(d), m_RIP(d), m_Primer(d), m_Preface(0), m_HasRIP(false) {}
-ASDCP::MXF::OPAtomHeader::~OPAtomHeader() {}
+ASDCP::MXF::OP1aHeader::OP1aHeader(const Dictionary*& d) : Partition(d), m_Dict(d), m_Primer(d), m_Preface(0) {}
+ASDCP::MXF::OP1aHeader::~OP1aHeader() {}
 
 //
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::InitFromFile(const Kumu::FileReader& Reader)
+ASDCP::MXF::OP1aHeader::InitFromFile(const Kumu::FileReader& Reader)
 {
-  m_HasRIP = false;
-  Result_t result = SeekToRIP(Reader);
-
-  if ( ASDCP_SUCCESS(result) )
-    {
-      result = m_RIP.InitFromFile(Reader);
-      ui32_t test_s = m_RIP.PairArray.size();
-
-      if ( ASDCP_FAILURE(result) )
-	{
-	  DefaultLogSink().Error("File contains no RIP\n");
-	  result = RESULT_OK;
-	}
-      else if ( test_s == 0 )
-	{
-	  DefaultLogSink().Error("RIP contains no Pairs.\n");
-	  result = RESULT_FORMAT;
-	}
-      else
-	{
-	  if ( test_s < 2 )
-	    {
-	      // OP-Atom states that there will be either two or three partitions:
-	      // one closed header and one closed footer with an optional body
-	      // SMPTE 429-5 files may have many partitions, see SMPTE 410M
-	      DefaultLogSink().Warn("RIP count is less than 2: %u\n", test_s);
-	    }
-
-	  m_HasRIP = true;
-      
-	  if ( m_RIP.PairArray.front().ByteOffset !=  0 )
-	    {
-	      DefaultLogSink().Error("First Partition in RIP is not at offset 0.\n");
-	      result = RESULT_FORMAT;
-	    }
-	}
-    }
-  else
-  {
-    DefaultLogSink().Error("OPAtomHeader::InitFromFile, SeekToRIP failed\n");
-  }
-
-  if ( ASDCP_SUCCESS(result) )
-    result = Reader.Seek(0);
-  else
-    DefaultLogSink().Error("OPAtomHeader::InitFromFile, Seek failed\n");
-
-  if ( ASDCP_SUCCESS(result) )
-    result = Partition::InitFromFile(Reader); // test UL and OP
-  else
-    DefaultLogSink().Error("OPAtomHeader::InitFromFile, Partition::InitFromFile failed\n");
+  Result_t result = result = Partition::InitFromFile(Reader);
 
   if ( ASDCP_FAILURE(result) )
     return result;
 
-  // is it really OP-Atom?
-  assert(m_Dict);
-  UL OPAtomUL(SMPTE_390_OPAtom_Entry().ul);
-  UL InteropOPAtomUL(MXFInterop_OPAtom_Entry().ul);
-
-  if ( OperationalPattern.ExactMatch(OPAtomUL) ) // SMPTE
+  if ( m_Dict == &DefaultCompositeDict() )
     {
-      if ( m_Dict == &DefaultCompositeDict() )
-	m_Dict = &DefaultSMPTEDict();
-    }
-  else if ( OperationalPattern.ExactMatch(InteropOPAtomUL) ) // Interop
-    {
-      if ( m_Dict == &DefaultCompositeDict() )
-	m_Dict = &DefaultInteropDict();
-    }
-  else
-    {
-      char strbuf[IdentBufferLen];
-      const MDDEntry* Entry = m_Dict->FindUL(OperationalPattern.Value());
-      if ( Entry == 0 )
-	DefaultLogSink().Warn("Operational pattern is not OP-Atom: %s\n",
-			      OperationalPattern.EncodeString(strbuf, IdentBufferLen));
-      else
-	DefaultLogSink().Warn("Operational pattern is not OP-Atom: %s\n", Entry->name);
+      // select more explicit dictionary if one is available
+      if ( OperationalPattern.ExactMatch(MXFInterop_OPAtom_Entry().ul) )
+	{
+	  m_Dict = &DefaultInteropDict();
+	}
+      else if ( OperationalPattern.ExactMatch(SMPTE_390_OPAtom_Entry().ul) )
+	{
+	  m_Dict = &DefaultSMPTEDict();
+	}
     }
 
   // slurp up the remainder of the header
@@ -774,36 +717,36 @@ ASDCP::MXF::OPAtomHeader::InitFromFile(const Kumu::FileReader& Reader)
     DefaultLogSink().Warn("Improbably small HeaderByteCount value: %u\n", HeaderByteCount);
 
   assert (HeaderByteCount <= 0xFFFFFFFFL);
-  result = m_Buffer.Capacity((ui32_t) HeaderByteCount);
+  result = m_HeaderData.Capacity((ui32_t)HeaderByteCount);
 
   if ( ASDCP_SUCCESS(result) )
     {
       ui32_t read_count;
-      result = Reader.Read(m_Buffer.Data(), m_Buffer.Capacity(), &read_count);
+      result = Reader.Read(m_HeaderData.Data(), m_HeaderData.Capacity(), &read_count);
 
       if ( ASDCP_FAILURE(result) )
         {
-	  DefaultLogSink().Error("OPAtomHeader::InitFromFile, Read failed\n");
+	  DefaultLogSink().Error("OP1aHeader::InitFromFile, Read failed\n");
 	  return result;
         }
 
-      if ( read_count != m_Buffer.Capacity() )
+      if ( read_count != m_HeaderData.Capacity() )
 	{
 	  DefaultLogSink().Error("Short read of OP-Atom header metadata; wanted %u, got %u\n",
-				 m_Buffer.Capacity(), read_count);
+				 m_HeaderData.Capacity(), read_count);
 	  return RESULT_KLV_CODING;
 	}
     }
 
   if ( ASDCP_SUCCESS(result) )
-    result = InitFromBuffer(m_Buffer.RoData(), m_Buffer.Capacity());
+    result = InitFromBuffer(m_HeaderData.RoData(), m_HeaderData.Capacity());
 
   return result;
 }
 
 //
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::InitFromPartitionBuffer(const byte_t* p, ui32_t l)
+ASDCP::MXF::OP1aHeader::InitFromPartitionBuffer(const byte_t* p, ui32_t l)
 {
   Result_t result = KLVPacket::InitFromBuffer(p, l);
 
@@ -821,7 +764,7 @@ ASDCP::MXF::OPAtomHeader::InitFromPartitionBuffer(const byte_t* p, ui32_t l)
 
 //
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::InitFromBuffer(const byte_t* p, ui32_t l)
+ASDCP::MXF::OP1aHeader::InitFromBuffer(const byte_t* p, ui32_t l)
 {
   assert(m_Dict);
   Result_t result = RESULT_OK;
@@ -844,6 +787,11 @@ ASDCP::MXF::OPAtomHeader::InitFromBuffer(const byte_t* p, ui32_t l)
 	  if ( object->IsA(m_Dict->ul(MDD_KLVFill)) )
 	    {
 	      delete object;
+
+	      if ( p > end_p )
+		{
+		  DefaultLogSink().Error("Fill item short read: %d.\n", p - end_p);
+		}
 	    }
 	  else if ( object->IsA(m_Dict->ul(MDD_Primer)) ) // TODO: only one primer should be found
 	    {
@@ -869,14 +817,14 @@ ASDCP::MXF::OPAtomHeader::InitFromBuffer(const byte_t* p, ui32_t l)
 }
 
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::GetMDObjectByID(const UUID& ObjectID, InterchangeObject** Object)
+ASDCP::MXF::OP1aHeader::GetMDObjectByID(const UUID& ObjectID, InterchangeObject** Object)
 {
   return m_PacketList->GetMDObjectByID(ObjectID, Object);
 }
 
 //
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::GetMDObjectByType(const byte_t* ObjectID, InterchangeObject** Object)
+ASDCP::MXF::OP1aHeader::GetMDObjectByType(const byte_t* ObjectID, InterchangeObject** Object)
 {
   InterchangeObject* TmpObject;
 
@@ -888,14 +836,14 @@ ASDCP::MXF::OPAtomHeader::GetMDObjectByType(const byte_t* ObjectID, InterchangeO
 
 //
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::GetMDObjectsByType(const byte_t* ObjectID, std::list<InterchangeObject*>& ObjectList)
+ASDCP::MXF::OP1aHeader::GetMDObjectsByType(const byte_t* ObjectID, std::list<InterchangeObject*>& ObjectList)
 {
   return m_PacketList->GetMDObjectsByType(ObjectID, ObjectList);
 }
 
 //
 ASDCP::MXF::Identification*
-ASDCP::MXF::OPAtomHeader::GetIdentification()
+ASDCP::MXF::OP1aHeader::GetIdentification()
 {
   InterchangeObject* Object;
 
@@ -907,7 +855,7 @@ ASDCP::MXF::OPAtomHeader::GetIdentification()
 
 //
 ASDCP::MXF::SourcePackage*
-ASDCP::MXF::OPAtomHeader::GetSourcePackage()
+ASDCP::MXF::OP1aHeader::GetSourcePackage()
 {
   InterchangeObject* Object;
 
@@ -918,12 +866,8 @@ ASDCP::MXF::OPAtomHeader::GetSourcePackage()
 }
 
 //
-ASDCP::MXF::RIP&
-ASDCP::MXF::OPAtomHeader::GetRIP() { return m_RIP; }
-
-//
 ASDCP::Result_t
-ASDCP::MXF::OPAtomHeader::WriteToFile(Kumu::FileWriter& Writer, ui32_t HeaderSize)
+ASDCP::MXF::OP1aHeader::WriteToFile(Kumu::FileWriter& Writer, ui32_t HeaderSize)
 {
   assert(m_Dict);
   if ( m_Preface == 0 )
@@ -1013,7 +957,7 @@ ASDCP::MXF::OPAtomHeader::WriteToFile(Kumu::FileWriter& Writer, ui32_t HeaderSiz
 
 //
 void
-ASDCP::MXF::OPAtomHeader::Dump(FILE* stream)
+ASDCP::MXF::OP1aHeader::Dump(FILE* stream)
 {
   if ( stream == 0 )
     stream = stderr;
@@ -1049,37 +993,37 @@ ASDCP::MXF::OPAtomIndexFooter::InitFromFile(const Kumu::FileReader& Reader)
 {
   Result_t result = Partition::InitFromFile(Reader); // test UL and OP
 
-	// slurp up the remainder of the footer
-	ui32_t read_count = 0;
+  // slurp up the remainder of the footer
+  ui32_t read_count = 0;
 
-	if ( ASDCP_SUCCESS(result) )
+  if ( ASDCP_SUCCESS(result) && IndexByteCount > 0 )
     {
-		assert (IndexByteCount <= 0xFFFFFFFFL);
-		// At this point, m_Buffer may not have been initialized
-		// so it's capacity is zero and data pointer is NULL
-		// However, if IndexByteCount is zero then the capacity
-		// doesn't change and the data pointer is not set.
-		result = m_Buffer.Capacity((ui32_t) IndexByteCount);
-    }
+      assert (IndexByteCount <= 0xFFFFFFFFL);
+      // At this point, m_FooterData may not have been initialized
+      // so it's capacity is zero and data pointer is NULL
+      // However, if IndexByteCount is zero then the capacity
+      // doesn't change and the data pointer is not set.
+      result = m_FooterData.Capacity((ui32_t) IndexByteCount);
 
-	if ( ASDCP_SUCCESS(result) && m_Buffer.Data() )
-		result = Reader.Read(m_Buffer.Data(), m_Buffer.Capacity(), &read_count);
+      if ( ASDCP_SUCCESS(result) )
+	result = Reader.Read(m_FooterData.Data(), m_FooterData.Capacity(), &read_count);
 
-  if ( ASDCP_SUCCESS(result) && read_count != m_Buffer.Capacity() )
-    {
-      DefaultLogSink().Error("Short read of footer partition: got %u, expecting %u\n",
-			     read_count, m_Buffer.Capacity());
-      return RESULT_FAIL;
-    }
-	else if( ASDCP_SUCCESS(result) && !m_Buffer.Data() )
+      if ( ASDCP_SUCCESS(result) && read_count != m_FooterData.Capacity() )
 	{
-		DefaultLogSink().Error( "Buffer for footer partition not created: IndexByteCount = %u\n",
-								IndexByteCount );
-		return RESULT_FAIL;
+	  DefaultLogSink().Error("Short read of footer partition: got %u, expecting %u\n",
+				 read_count, m_FooterData.Capacity());
+	  return RESULT_FAIL;
+	}
+      else if( ASDCP_SUCCESS(result) && !m_FooterData.Data() )
+	{
+	  DefaultLogSink().Error( "Buffer for footer partition not created: IndexByteCount = %u\n",
+				  IndexByteCount );
+	  return RESULT_FAIL;
 	}
 
-  if ( ASDCP_SUCCESS(result) )
-    result = InitFromBuffer(m_Buffer.RoData(), m_Buffer.Capacity());
+      if ( ASDCP_SUCCESS(result) )
+	result = InitFromBuffer(m_FooterData.RoData(), m_FooterData.Capacity());
+    }
 
   return result;
 }
@@ -1352,7 +1296,7 @@ ASDCP::MXF::InterchangeObject::InitFromTLVSet(TLVReader& TLVSet)
 {
   Result_t result = TLVSet.ReadObject(OBJ_READ_ARGS(InterchangeObject, InstanceUID));
   if ( ASDCP_SUCCESS(result) )
-    result = TLVSet.ReadObject(OBJ_READ_ARGS(GenerationInterchangeObject, GenerationUID));
+    result = TLVSet.ReadObject(OBJ_READ_ARGS_OPT(GenerationInterchangeObject, GenerationUID));
   return result;
 }
 
@@ -1362,7 +1306,7 @@ ASDCP::MXF::InterchangeObject::WriteToTLVSet(TLVWriter& TLVSet)
 {
   Result_t result = TLVSet.WriteObject(OBJ_WRITE_ARGS(InterchangeObject, InstanceUID));
   if ( ASDCP_SUCCESS(result) )
-    result = TLVSet.WriteObject(OBJ_WRITE_ARGS(GenerationInterchangeObject, GenerationUID));
+    result = TLVSet.WriteObject(OBJ_WRITE_ARGS_OPT(GenerationInterchangeObject, GenerationUID));
   return result;
 }
 
@@ -1422,7 +1366,9 @@ ASDCP::MXF::InterchangeObject::Dump(FILE* stream)
   fputc('\n', stream);
   KLVPacket::Dump(stream, *m_Dict, false);
   fprintf(stream, "             InstanceUID = %s\n",  InstanceUID.EncodeHex(identbuf, IdentBufferLen));
-  fprintf(stream, "           GenerationUID = %s\n",  GenerationUID.EncodeHex(identbuf, IdentBufferLen));
+
+  if ( ! GenerationUID.empty() )
+    fprintf(stream, "           GenerationUID = %s\n",  GenerationUID.get().EncodeHex(identbuf, IdentBufferLen));
 }
 
 //
@@ -1508,6 +1454,240 @@ ASDCP::MXF::CreateObject(const Dictionary*& Dict, const UL& label)
   return i->second(Dict);
 }
 
+
+//------------------------------------------------------------------------------------------
+
+//
+bool
+ASDCP::MXF::decode_mca_string(const std::string& s, const mca_label_map_t& labels, const Dictionary& dict, const std::string& language,
+			      InterchangeObject_list_t& descriptor_list, ui32_t& channel_count)
+{
+  const Dictionary *dictp = &dict;
+  std::string symbol_buf;
+  channel_count = 0;
+  ASDCP::MXF::SoundfieldGroupLabelSubDescriptor *current_soundfield = 0;
+  std::string::const_iterator i;
+
+  for ( i = s.begin(); i != s.end(); ++i )
+    {
+      if ( *i == '(' )
+	{
+	  if ( current_soundfield != 0 )
+	    {
+	      fprintf(stderr, "Encountered '(', already processing a soundfield group.\n");
+	      return false;
+	    }
+
+	  if ( symbol_buf.empty() )
+	    {
+	      fprintf(stderr, "Encountered '(', without leading soundfield group symbol.\n");
+	      return false;
+	    }
+
+	  mca_label_map_t::const_iterator i = labels.find(symbol_buf);
+      
+	  if ( i == labels.end() )
+	    {
+	      fprintf(stderr, "Unknown symbol: '%s'\n", symbol_buf.c_str());
+	      return false;
+	    }
+      
+	  if ( i->second.Value()[10] != 2 ) // magic depends on UL "Essence Facet" byte (see ST 428-12)
+	    {
+	      fprintf(stderr, "Not a soundfield group symbol: '%s'\n", symbol_buf.c_str());
+	      return false;
+	    }
+
+	  current_soundfield = new ASDCP::MXF::SoundfieldGroupLabelSubDescriptor(dictp);
+
+	  GenRandomValue(current_soundfield->InstanceUID);
+	  GenRandomValue(current_soundfield->MCALinkID);
+	  current_soundfield->MCATagSymbol = "sg" + i->first;
+	  current_soundfield->MCATagName = i->first;
+	  current_soundfield->RFC5646SpokenLanguage = language;
+	  current_soundfield->MCALabelDictionaryID = i->second;
+	  descriptor_list.push_back(reinterpret_cast<ASDCP::MXF::InterchangeObject*>(current_soundfield));
+	  symbol_buf.clear();
+	}
+      else if ( *i == ')' )
+	{
+	  if ( current_soundfield == 0 )
+	    {
+	      fprintf(stderr, "Encountered ')', not currently processing a soundfield group.\n");
+	      return false;
+	    }
+
+	  if ( symbol_buf.empty() )
+	    {
+	      fprintf(stderr, "Soundfield group description contains no channels.\n");
+	      return false;
+	    }
+
+	  mca_label_map_t::const_iterator i = labels.find(symbol_buf);
+      
+	  if ( i == labels.end() )
+	    {
+	      fprintf(stderr, "Unknown symbol: '%s'\n", symbol_buf.c_str());
+	      return false;
+	    }
+
+	  ASDCP::MXF::AudioChannelLabelSubDescriptor *channel_descr =
+	    new ASDCP::MXF::AudioChannelLabelSubDescriptor(dictp);
+
+	  GenRandomValue(channel_descr->InstanceUID);
+	  assert(current_soundfield);
+	  channel_descr->MCALinkID = current_soundfield->MCALinkID;
+	  channel_descr->MCAChannelID = channel_count++;
+	  channel_descr->MCATagSymbol = "ch" + i->first;
+	  channel_descr->MCATagName = i->first;
+	  channel_descr->RFC5646SpokenLanguage = language;
+	  channel_descr->MCALabelDictionaryID = i->second;
+	  descriptor_list.push_back(reinterpret_cast<ASDCP::MXF::InterchangeObject*>(channel_descr));
+	  symbol_buf.clear();
+	  current_soundfield = 0;
+	}
+      else if ( *i == ',' )
+	{
+	  if ( ! symbol_buf.empty() )
+	    {
+	      mca_label_map_t::const_iterator i = labels.find(symbol_buf);
+
+	      if ( i == labels.end() )
+		{
+		  fprintf(stderr, "Unknown symbol: '%s'\n", symbol_buf.c_str());
+		  return false;
+		}
+
+	      if ( i->second.Value()[10] != 1 ) // magic depends on UL "Essence Facet" byte (see ST 428-12)
+		{
+		  fprintf(stderr, "Not a channel symbol: '%s'\n", symbol_buf.c_str());
+		  return false;
+		}
+
+	      ASDCP::MXF::AudioChannelLabelSubDescriptor *channel_descr =
+		new ASDCP::MXF::AudioChannelLabelSubDescriptor(dictp);
+
+	      GenRandomValue(channel_descr->InstanceUID);
+
+	      if ( current_soundfield != 0 )
+		{
+		  channel_descr->MCALinkID = current_soundfield->MCALinkID;
+		}
+
+	      channel_descr->MCAChannelID = channel_count++;
+	      channel_descr->MCATagSymbol = "ch" + i->first;
+	      channel_descr->MCATagName = i->first;
+	      channel_descr->RFC5646SpokenLanguage = language;
+	      channel_descr->MCALabelDictionaryID = i->second;
+	      descriptor_list.push_back(reinterpret_cast<ASDCP::MXF::InterchangeObject*>(channel_descr));
+	      symbol_buf.clear();
+	    }
+	}
+      else if ( isalnum(*i) )
+	{
+	  symbol_buf += *i;
+	}
+      else if ( ! isspace(*i) )
+	{
+	  fprintf(stderr, "Unexpected character '%c'.\n", *i);
+	  return false;
+	}
+    }
+
+  if ( ! symbol_buf.empty() )
+    {
+      mca_label_map_t::const_iterator i = labels.find(symbol_buf);
+      
+      if ( i == labels.end() )
+	{
+	  fprintf(stderr, "Unknown symbol: '%s'\n", symbol_buf.c_str());
+	  return false;
+	}
+
+      ASDCP::MXF::AudioChannelLabelSubDescriptor *channel_descr =
+	new ASDCP::MXF::AudioChannelLabelSubDescriptor(dictp);
+
+      GenRandomValue(channel_descr->InstanceUID);
+
+      if ( current_soundfield != 0 )
+	{
+	  channel_descr->MCALinkID = current_soundfield->MCALinkID;
+	}
+
+      channel_descr->MCAChannelID = channel_count++;
+      channel_descr->MCATagSymbol = "ch" + i->first;
+      channel_descr->MCATagName = i->first;
+      channel_descr->RFC5646SpokenLanguage = language;
+      channel_descr->MCALabelDictionaryID = i->second;
+      descriptor_list.push_back(reinterpret_cast<ASDCP::MXF::InterchangeObject*>(channel_descr));
+    }
+
+  return true;
+}
+
+
+ASDCP::MXF::ASDCP_MCAConfigParser::ASDCP_MCAConfigParser(const Dictionary*& d) : m_Dict(d), m_ChannelCount(0)
+{
+  m_LabelMap.insert(mca_label_map_t::value_type("L", m_Dict->ul(MDD_DCAudioChannel_L)));
+  m_LabelMap.insert(mca_label_map_t::value_type("R", m_Dict->ul(MDD_DCAudioChannel_R)));
+  m_LabelMap.insert(mca_label_map_t::value_type("C", m_Dict->ul(MDD_DCAudioChannel_C)));
+  m_LabelMap.insert(mca_label_map_t::value_type("LFE", m_Dict->ul(MDD_DCAudioChannel_LFE)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Ls", m_Dict->ul(MDD_DCAudioChannel_Ls)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rs", m_Dict->ul(MDD_DCAudioChannel_Rs)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Lss", m_Dict->ul(MDD_DCAudioChannel_Lss)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rss", m_Dict->ul(MDD_DCAudioChannel_Rss)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Lrs", m_Dict->ul(MDD_DCAudioChannel_Lrs)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rrs", m_Dict->ul(MDD_DCAudioChannel_Rrs)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Lc", m_Dict->ul(MDD_DCAudioChannel_Lc)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rc", m_Dict->ul(MDD_DCAudioChannel_Rc)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Cs", m_Dict->ul(MDD_DCAudioChannel_Cs)));
+  m_LabelMap.insert(mca_label_map_t::value_type("HI", m_Dict->ul(MDD_DCAudioChannel_HI)));
+  m_LabelMap.insert(mca_label_map_t::value_type("VIN", m_Dict->ul(MDD_DCAudioChannel_VIN)));
+  m_LabelMap.insert(mca_label_map_t::value_type("51", m_Dict->ul(MDD_DCAudioSoundfield_51)));
+  m_LabelMap.insert(mca_label_map_t::value_type("71", m_Dict->ul(MDD_DCAudioSoundfield_71)));
+  m_LabelMap.insert(mca_label_map_t::value_type("SDS", m_Dict->ul(MDD_DCAudioSoundfield_SDS)));
+  m_LabelMap.insert(mca_label_map_t::value_type("61", m_Dict->ul(MDD_DCAudioSoundfield_61)));
+  m_LabelMap.insert(mca_label_map_t::value_type("M", m_Dict->ul(MDD_DCAudioSoundfield_M)));
+}
+
+//
+ui32_t
+ASDCP::MXF::ASDCP_MCAConfigParser::ChannelCount() const
+{
+  return m_ChannelCount;
+}
+
+// 51(L,R,C,LFE,Ls,Rs),HI,VIN
+bool
+ASDCP::MXF::ASDCP_MCAConfigParser::DecodeString(const std::string& s, const std::string& language)
+{
+  return decode_mca_string(s, m_LabelMap, *m_Dict, language, *this, m_ChannelCount);
+}
+
+
+
+ASDCP::MXF::AS02_MCAConfigParser::AS02_MCAConfigParser(const Dictionary*& d) : ASDCP::MXF::ASDCP_MCAConfigParser(d)
+{
+  m_LabelMap.insert(mca_label_map_t::value_type("M1", m_Dict->ul(MDD_IMFAudioChannel_M1)));
+  m_LabelMap.insert(mca_label_map_t::value_type("M2", m_Dict->ul(MDD_IMFAudioChannel_M2)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Lt", m_Dict->ul(MDD_IMFAudioChannel_Lt)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rt", m_Dict->ul(MDD_IMFAudioChannel_Rt)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Lst", m_Dict->ul(MDD_IMFAudioChannel_Lst)));
+  m_LabelMap.insert(mca_label_map_t::value_type("Rst", m_Dict->ul(MDD_IMFAudioChannel_Rst)));
+  m_LabelMap.insert(mca_label_map_t::value_type("S", m_Dict->ul(MDD_IMFAudioChannel_S)));
+  m_LabelMap.insert(mca_label_map_t::value_type("ST", m_Dict->ul(MDD_IMFAudioSoundfield_ST)));
+  m_LabelMap.insert(mca_label_map_t::value_type("DM", m_Dict->ul(MDD_IMFAudioSoundfield_DM)));
+  m_LabelMap.insert(mca_label_map_t::value_type("DNS", m_Dict->ul(MDD_IMFAudioSoundfield_DNS)));
+  m_LabelMap.insert(mca_label_map_t::value_type("30", m_Dict->ul(MDD_IMFAudioSoundfield_30)));
+  m_LabelMap.insert(mca_label_map_t::value_type("40", m_Dict->ul(MDD_IMFAudioSoundfield_40)));
+  m_LabelMap.insert(mca_label_map_t::value_type("50", m_Dict->ul(MDD_IMFAudioSoundfield_50)));
+  m_LabelMap.insert(mca_label_map_t::value_type("60", m_Dict->ul(MDD_IMFAudioSoundfield_60)));
+  m_LabelMap.insert(mca_label_map_t::value_type("70", m_Dict->ul(MDD_IMFAudioSoundfield_70)));
+  m_LabelMap.insert(mca_label_map_t::value_type("LtRt", m_Dict->ul(MDD_IMFAudioSoundfield_LtRt)));
+  m_LabelMap.insert(mca_label_map_t::value_type("51Ex", m_Dict->ul(MDD_IMFAudioSoundfield_51Ex)));
+  m_LabelMap.insert(mca_label_map_t::value_type("HI", m_Dict->ul(MDD_IMFAudioSoundfield_HI)));
+  m_LabelMap.insert(mca_label_map_t::value_type("VIN", m_Dict->ul(MDD_IMFAudioSoundfield_VIN)));
+}
 
 //
 // end MXF.cpp

@@ -1,7 +1,8 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 #
-# $Id: Makefile.am,v 1.63 2013/02/08 19:11:58 jhurst Exp $
-# Copyright (c) 2007-2011 John Hurst. All rights reserved.
+# $Id: Makefile.am,v 1.70 2013/07/02 20:52:54 mikey Exp $
+#
+# Copyright (c) 2007-2013 John Hurst. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -63,11 +64,21 @@ include_HEADERS += \
 	Wav.h \
 	PCMParserList.h \
 	AtmosSyncChannel_Generator.h
+
 nodist_include_HEADERS = TimedText_Transform.h
 endif
 
+if USE_AS_02
+include_HEADERS		+= AS_02.h
+endif
+
 # list of the libraries to build and install
+
 lib_LTLIBRARIES = libkumu.la libasdcp.la
+
+if USE_AS_02
+lib_LTLIBRARIES		+= libas02.la
+endif
 
 # sources for kumu library
 libkumu_la_SOURCES = KM_error.h KM_fileio.cpp KM_fileio.h KM_log.cpp KM_log.h \
@@ -83,21 +94,21 @@ nodist_libasdcp_la_SOURCES = Metadata_h.tt2 Metadata_cpp.tt2 \
 		mxfgen.pl MXF_def.pl ullist.pl ULList.xml dict.xml DMS_Crypto.xml
 # sources for asdcp library
 libasdcp_la_SOURCES = MPEG2_Parser.cpp MPEG.cpp JP2K_Codestream_Parser.cpp \
-		JP2K_Sequence_Parser.cpp JP2K.cpp PCM_Parser.cpp Wav.cpp \
-		TimedText_Parser.cpp KLV.cpp Dict.cpp MXFTypes.cpp MXF.cpp \
-		Index.cpp Metadata.cpp AS_DCP.cpp AS_DCP_MXF.cpp AS_DCP_AES.cpp \
-		h__Reader.cpp h__Writer.cpp AS_DCP_MPEG2.cpp AS_DCP_JP2K.cpp \
-		AS_DCP_PCM.cpp AS_DCP_TimedText.cpp PCMParserList.cpp \
-		Wav.h WavFileWriter.h MXF.h Metadata.h \
-		JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h \
-		PCMParserList.h S12MTimecode.h MDD.cpp \
-		AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp AS_DCP_DCData_internal.h \
-		DCData_ByteStream_Parser.cpp DCData_Sequence_Parser.cpp \
-		AtmosSyncChannel_Generator.cpp AtmosSyncChannel_Generator.h \
-		AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
-		PCMDataProviders.cpp PCMDataProviders.h \
-		SyncEncoder.c SyncEncoder.h SyncCommon.h CRC16.c CRC16.h \
-		UUIDInformation.c UUIDInformation.h
+	JP2K_Sequence_Parser.cpp JP2K.cpp PCM_Parser.cpp Wav.cpp \
+	TimedText_Parser.cpp KLV.cpp Dict.cpp MXFTypes.cpp MXF.cpp \
+	Index.cpp Metadata.cpp AS_DCP.cpp AS_DCP_MXF.cpp AS_DCP_AES.cpp \
+	h__Reader.cpp h__Writer.cpp AS_DCP_MPEG2.cpp AS_DCP_JP2K.cpp \
+	AS_DCP_PCM.cpp AS_DCP_TimedText.cpp PCMParserList.cpp \
+	Wav.h WavFileWriter.h MXF.h Metadata.h \
+	JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h \
+	PCMParserList.h S12MTimecode.h MDD.cpp \
+	AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp AS_DCP_DCData_internal.h \
+	DCData_ByteStream_Parser.cpp DCData_Sequence_Parser.cpp \
+	AtmosSyncChannel_Generator.cpp AtmosSyncChannel_Generator.h \
+	AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
+	PCMDataProviders.cpp PCMDataProviders.h \
+	SyncEncoder.c SyncEncoder.h SyncCommon.h CRC16.c CRC16.h \
+	UUIDInformation.c UUIDInformation.h
 
 
 if DEV_HEADERS
@@ -108,6 +119,21 @@ libasdcp_la_LDFLAGS = -release @VERSION@
 # additional libraries to link against for a library
 libasdcp_la_LIBADD = libkumu.la
 libasdcp_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
+
+if USE_AS_02
+# sources for as-02 library
+libas02_la_SOURCES	= \
+	AS_02.h \
+	AS_02_internal.h \
+	h__02_Reader.cpp \
+	h__02_Writer.cpp \
+	AS_02_JP2K.cpp \
+	AS_02_PCM.cpp
+
+libas02_la_LDFLAGS = -release @VERSION@
+libas02_la_LIBADD = libasdcp.la libkumu.la
+libas02_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
+endif
 
 # Python extension
 if PYTHON_USE
@@ -151,8 +177,15 @@ endif
 # list of programs to be built and installed
 bin_PROGRAMS = \
 	asdcp-wrap asdcp-unwrap asdcp-util asdcp-info asdcp-test \
-	j2c-test blackwave klvwalk wavesplit \
+	j2c-test blackwave klvwalk wavesplit klvsplit \
 	kmfilegen kmrandgen kmuuidgen
+
+if USE_AS_02
+bin_PROGRAMS += \
+	as-02-wrap \
+	as-02-unwrap
+endif
+
 
 # sources and linkage for CLI utilities
 asdcp_test_SOURCES = asdcp-test.cpp
@@ -190,6 +223,17 @@ wavesplit_LDADD = libasdcp.la
 
 j2c_test_SOURCES = j2c-test.cpp
 j2c_test_LDADD = libasdcp.la
+
+klvsplit_SOURCES = klvsplit.cpp
+klvsplit_LDADD = libasdcp.la
+
+if USE_AS_02
+as_02_wrap_SOURCES = as-02-wrap.cpp
+as_02_wrap_LDADD = libas02.la
+
+as_02_unwrap_SOURCES = as-02-unwrap.cpp
+as_02_unwrap_LDADD = libas02.la
+endif
 
 # list of programs that need to be compiled for use in test suite
 check_PROGRAMS = asdcp-mem-test path-test \

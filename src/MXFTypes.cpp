@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXFTypes.cpp
-    \version $Id: MXFTypes.cpp,v 1.27 2012/02/21 02:09:31 jhurst Exp $
+    \version $Id: MXFTypes.cpp,v 1.28 2013/07/02 05:51:18 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -228,6 +228,20 @@ ASDCP::UMID::EncodeString(char* str_buf, ui32_t buf_len) const
 //
 
 //
+ASDCP::MXF::UTF16String::UTF16String(const char* sz)
+{
+  if ( sz != 0 && *sz != 0 )
+    {
+      this->assign(sz);
+    }
+}
+
+ASDCP::MXF::UTF16String::UTF16String(const std::string& str)
+{
+  this->assign(str);
+}
+
+//
 const ASDCP::MXF::UTF16String&
 ASDCP::MXF::UTF16String::operator=(const char* sz)
 {
@@ -331,6 +345,21 @@ ASDCP::MXF::UTF16String::Archive(Kumu::MemIOWriter* Writer) const
 
 //------------------------------------------------------------------------------------------
 //
+
+//
+ASDCP::MXF::ISO8String::ISO8String(const char* sz)
+{
+  if ( sz != 0 && *sz != 0 )
+    {
+      this->assign(sz);
+    }
+}
+
+ASDCP::MXF::ISO8String::ISO8String(const std::string& str)
+{
+  this->assign(str);
+}
+
 
 //
 const ASDCP::MXF::ISO8String&

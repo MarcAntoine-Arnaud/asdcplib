@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    Index.cpp
-    \version $Id: Index.cpp,v 1.21 2012/02/03 19:49:56 jhurst Exp $
+    \version $Id: Index.cpp,v 1.24 2013/06/09 20:17:31 jhurst Exp $
     \brief   MXF index segment objects
 */
 
@@ -35,7 +35,7 @@ const ui32_t kl_length = ASDCP::SMPTE_UL_LENGTH + ASDCP::MXF_BER_LENGTH;
 
 //
 ASDCP::MXF::IndexTableSegment::IndexTableSegment(const Dictionary*& d) :
-  InterchangeObject(d), m_Dict(d),
+  InterchangeObject(d), m_Dict(d), RtFileOffset(0), RtEntryOffset(0),
   IndexStartPosition(0), IndexDuration(0), EditUnitByteCount(0),
   IndexSID(129), BodySID(1), SliceCount(0), PosTableCount(0)
 {
@@ -136,7 +136,7 @@ ASDCP::MXF::IndexTableSegment::Dump(FILE* stream)
 
   fprintf(stream, "  DeltaEntryArray:\n");  DeltaEntryArray.Dump(stream);
 
-  if ( IndexEntryArray.size() < 100 )
+  if ( IndexEntryArray.size() < 1000 )
     {
       fprintf(stream, "  IndexEntryArray:\n");
       IndexEntryArray.Dump(stream);

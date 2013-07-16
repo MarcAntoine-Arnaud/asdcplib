@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-info.cpp
-    \version $Id: asdcp-info.cpp,v 1.3 2012/11/27 01:52:06 jhurst Exp $
+    \version $Id: asdcp-info.cpp,v 1.6 2013/07/02 15:35:41 jhurst Exp $
     \brief   AS-DCP file metadata utility
 
   This program provides metadata information about an AS-DCP file.
@@ -355,8 +355,8 @@ public:
     const Dictionary& Dict = DefaultCompositeDict();
     MXF::RGBAEssenceDescriptor *descriptor = 0;
 
-    Result_t result = m_Reader.OPAtomHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_RGBAEssenceDescriptor),
-								reinterpret_cast<MXF::InterchangeObject**>(&descriptor));
+    Result_t result = m_Reader.OP1aHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_RGBAEssenceDescriptor),
+							      reinterpret_cast<MXF::InterchangeObject**>(&descriptor));
 
     if ( KM_SUCCESS(result) )
       m_PictureEssenceCoding = descriptor->PictureEssenceCoding;
@@ -511,13 +511,13 @@ public:
     const Dictionary& Dict = DefaultCompositeDict();
     MXF::WaveAudioDescriptor *descriptor = 0;
 
-    Result_t result = m_Reader.OPAtomHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_WaveAudioDescriptor),
-								reinterpret_cast<MXF::InterchangeObject**>(&descriptor));
+    Result_t result = m_Reader.OP1aHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_WaveAudioDescriptor),
+							      reinterpret_cast<MXF::InterchangeObject**>(&descriptor));
 
     if ( KM_SUCCESS(result) )
       {
 	char buf[64];
-	fprintf(stream, "ChannelAssignment: %s\n", descriptor->ChannelAssignment.EncodeString(buf, 64));
+	fprintf(stream, "ChannelAssignment: %s\n", descriptor->ChannelAssignment.const_get().EncodeString(buf, 64));
       }
   }
 
@@ -631,7 +631,7 @@ show_file_info(CommandOptions& Options)
       fprintf(stderr, "File is not AS-DCP: %s\n", Options.filenames.front().c_str());
       Kumu::FileReader   Reader;
       const Dictionary* Dict = &DefaultCompositeDict();
-      MXF::OPAtomHeader TestHeader(Dict);
+      MXF::OP1aHeader TestHeader(Dict);
 
       result = Reader.OpenRead(Options.filenames.front().c_str());
 

@@ -1,4 +1,4 @@
-# $Id: Makefile.wmk,v 1.4 2012/03/07 18:16:52 mikey Exp $
+# $Id: Makefile.wmk,v 1.6 2013/06/26 19:34:18 msheby Exp $
 # Copyright (c) 2007-2012 John Hurst. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,11 +33,11 @@ OBJDIR = .
 
 !ifdef ENABLE_RANDOM_UUID
 CXXFLAGS1 = /nologo /W3 /GR /EHsc /DWIN32 /DKM_WIN32 /D_CONSOLE /I. /I$(SRCDIR) /DASDCP_PLATFORM=\"win32\" \
-	/D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DPACKAGE_VERSION=\"1.11.49\" \
+	/D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DPACKAGE_VERSION=\"2.0.0\" \
 	/I"$(WITH_OPENSSL)"\inc32 /DCONFIG_RANDOM_UUID=1
 !else
 CXXFLAGS1 = /nologo /W3 /GR /EHsc /DWIN32 /DKM_WIN32 /D_CONSOLE /I. /I$(SRCDIR) /DASDCP_PLATFORM=\"win32\" \
-	/D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DPACKAGE_VERSION=\"1.11.49\" \
+	/D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_WARNINGS /DPACKAGE_VERSION=\"2.0.0\" \
 	/I"$(WITH_OPENSSL)"\inc32
 !endif
 LIB_EXE = lib.exe
@@ -83,14 +83,26 @@ ASDCP_OBJS = MPEG2_Parser.obj MPEG.obj JP2K_Codestream_Parser.obj \
 	Index.obj Metadata.obj AS_DCP.obj AS_DCP_MXF.obj AS_DCP_AES.obj \
 	h__Reader.obj h__Writer.obj AS_DCP_MPEG2.obj AS_DCP_JP2K.obj \
 	AS_DCP_PCM.obj AS_DCP_TimedText.obj PCMParserList.obj \
-	MDD.obj
+	MDD.obj AS_DCP_ATMOS.obj AS_DCP_DCData.obj \
+	DCData_ByteStream_Parser.obj DCData_Sequence_Parser.obj \
+	AtmosSyncChannel_Generator.obj AtmosSyncChannel_Mixer.obj \
+	PCMDataProviders.obj SyncEncoder.obj CRC16.obj \
+	UUIDInformation.obj
+AS02_OBJS = h__02_Reader.obj h__02_Writer.obj AS_02_JP2K.obj \
+	AS_02_PCM.obj
 
 {$(SRCDIR)\}.cpp{}.obj:
+	$(CXX) $(CXXFLAGS) -Fd$(OBJDIR)\ /c $<
+
+{$(SRCDIR)\}.c{}.obj:
 	$(CXX) $(CXXFLAGS) -Fd$(OBJDIR)\ /c $<
 
 all: kmfilegen.exe kmrandgen.exe kmuuidgen.exe asdcp-test.exe \
      asdcp-wrap.exe asdcp-unwrap.exe asdcp-info.exe \
      blackwave.exe klvwalk.exe j2c-test.exe wavesplit.exe 
+!IFDEF USE_AS_02
+       as-02-wrap.exe as-02-unwrap.exe \
+!ENDIF
 
 clean:
 	erase *.exe *.lib *.obj *.ilk *.pdb *.idb
@@ -110,6 +122,11 @@ libkumu.lib : $(KUMU_OBJS)
 
 libasdcp.lib: libkumu.lib $(ASDCP_OBJS)
 	$(LIB_EXE) $(LIBFLAGS) /OUT:libasdcp.lib $**
+
+!IFDEF USE_AS_02
+libas02.lib: libasdcp.lib libkumu.lib $(AS02_OBJS)
+	$(LIB_EXE) $(LIBFLAGS) /OUT:libas02.lib $**
+!ENDIF
 
 blackwave.exe: libasdcp.lib blackwave.obj
 	$(LINK) $(LINKFLAGS) /OUT:blackwave.exe $** Advapi32.lib
@@ -146,6 +163,14 @@ asdcp-util.exe: libasdcp.lib asdcp-util.obj
 
 j2c-test.exe: libasdcp.lib j2c-test.obj
 	$(LINK) $(LINKFLAGS) /OUT:j2c-test.exe $** Advapi32.lib
+
+!IFDEF USE_AS_02
+as-02-wrap.exe: libas02.lib as-02-wrap.obj
+	$(LINK) $(LINKFLAGS) /OUT:as-02-wrap.exe $** Advapi32.lib
+
+as-02-unwrap.exe: libas02.lib as-02-unwrap.obj
+	$(LINK) $(LINKFLAGS) /OUT:as-02-unwrap.exe $** Advapi32.lib
+!ENDIF
 
 
 # END Makefile

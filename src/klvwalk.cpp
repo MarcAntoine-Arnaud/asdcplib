@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2009, John Hurst
+Copyright (c) 2005-2013, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    klvwalk.cpp
-    \version $Id: klvwalk.cpp,v 1.18 2010/11/15 17:04:13 jhurst Exp $
+    \version $Id: klvwalk.cpp,v 1.22 2013/06/07 00:41:00 jhurst Exp $
     \brief   KLV+MXF test
 */
 
@@ -65,7 +65,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2005-2009 John Hurst\n\
+Copyright (c) 2005-2013 John Hurst\n\
 %s is part of the asdcplib DCP tools package.\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
@@ -78,12 +78,13 @@ void
 usage(FILE* stream = stdout)
 {
   fprintf(stream, "\
-USAGE: %s [-r] [-v] <input-file> [<input-file2> ...]\n\
+USAGE: %s [-r|-p] [-v] <input-file> [<input-file2> ...]\n\
 \n\
        %s [-h|-help] [-V]\n\
 \n\
   -h | -help   - Show help\n\
-  -r           - When KLV data is an MXF OPAtom file, display OPAtom headers\n\
+  -r           - When KLV data is an MXF OPAtom or OP 1a file, display headers\n\
+  -p           - Display partition headers by walking the RIP\n\
   -v           - Verbose. Prints informative messages to stderr\n\
   -V           - Show version information\n\
 \n\
@@ -104,10 +105,12 @@ USAGE: %s [-r] [-v] <input-file> [<input-file2> ...]\n\
    bool   help_flag;                // true if the help display option was selected
    bool   verbose_flag;             // true if the informative messages option was selected
    bool   read_mxf_flag;            // true if the -r option was selected
+   bool   walk_parts_flag;          // true if the -p option was selected
    FileList_t inFileList;           // File to operate on
 
    CommandOptions(int argc, const char** argv) :
-     error_flag(true), version_flag(false), help_flag(false), verbose_flag(false), read_mxf_flag(false)
+     error_flag(true), version_flag(false), help_flag(false),
+     verbose_flag(false), read_mxf_flag(false), walk_parts_flag(false)
    {
      for ( int i = 1; i < argc; i++ )
        {
@@ -124,6 +127,7 @@ USAGE: %s [-r] [-v] <input-file> [<input-file2> ...]\n\
 	       {
 	       case 'h': help_flag = true; break;
 	       case 'r': read_mxf_flag = true; break;
+	       case 'p': walk_parts_flag = true; break;
 	       case 'V': version_flag = true; break;
 	       case 'v': verbose_flag = true; break;
 
@@ -194,21 +198,47 @@ main(int argc, const char** argv)
 	{
 	  Kumu::FileReader        Reader;
 	  const Dictionary* Dict = &DefaultCompositeDict();
-	  ASDCP::MXF::OPAtomHeader Header(Dict);
+	  ASDCP::MXF::OP1aHeader Header(Dict);
+	  ASDCP::MXF::RIP RIP(Dict);
 	  
 	  result = Reader.OpenRead((*fi).c_str());
 	  
+	  if ( ASDCP_SUCCESS(result) )
+	    result = MXF::SeekToRIP(Reader);
+
+	  if ( ASDCP_SUCCESS(result) )
+	    {
+	      result = RIP.InitFromFile(Reader);
+	      ui32_t test_s = RIP.PairArray.size();
+
+	      if ( ASDCP_FAILURE(result) )
+		{
+		  DefaultLogSink().Error("File contains no RIP\n");
+		  result = RESULT_OK;
+		}
+	      else if ( RIP.PairArray.empty() )
+		{
+		  DefaultLogSink().Error("RIP contains no Pairs.\n");
+		}
+
+	      Reader.Seek(0);
+	    }
+	  else
+	    {
+	      DefaultLogSink().Error("read_mxf SeekToRIP failed: %s\n", result.Label());
+	    }
+
 	  if ( ASDCP_SUCCESS(result) )
 	    result = Header.InitFromFile(Reader);
 	  
 	  if ( ASDCP_SUCCESS(result) )
 	    Header.Dump(stdout);
 	  
-	  if ( ASDCP_SUCCESS(result) && Header.m_RIP.PairArray.size() > 2 )
+	  if ( ASDCP_SUCCESS(result) && RIP.PairArray.size() > 2 )
 	    {
-	      MXF::Array<MXF::RIP::Pair>::const_iterator pi = Header.m_RIP.PairArray.begin();
+	      MXF::Array<MXF::RIP::Pair>::const_iterator pi = RIP.PairArray.begin();
 
-	      for ( pi++; pi != Header.m_RIP.PairArray.end() && ASDCP_SUCCESS(result); pi++ )
+	      for ( pi++; pi != RIP.PairArray.end() && ASDCP_SUCCESS(result); pi++ )
 		{
 		  result = Reader.Seek((*pi).ByteOffset);
 
@@ -239,7 +269,62 @@ main(int argc, const char** argv)
 	    }
 
 	  if ( ASDCP_SUCCESS(result) )
-	    Header.m_RIP.Dump(stdout);
+	    RIP.Dump(stdout);
+	}
+      else if ( Options.walk_parts_flag )
+	{
+	  Kumu::FileReader        Reader;
+	  const Dictionary* Dict = &DefaultCompositeDict();
+	  ASDCP::MXF::OP1aHeader Header(Dict);
+	  ASDCP::MXF::RIP RIP(Dict);
+	  
+	  result = Reader.OpenRead((*fi).c_str());
+	  
+	  if ( ASDCP_SUCCESS(result) )
+	    result = MXF::SeekToRIP(Reader);
+
+	  if ( ASDCP_SUCCESS(result) )
+	    {
+	      result = RIP.InitFromFile(Reader);
+	      ui32_t test_s = RIP.PairArray.size();
+
+	      if ( ASDCP_FAILURE(result) )
+		{
+		  DefaultLogSink().Error("File contains no RIP\n");
+		  result = RESULT_OK;
+		}
+	      else if ( RIP.PairArray.empty() )
+		{
+		  DefaultLogSink().Error("RIP contains no Pairs.\n");
+		}
+
+	      Reader.Seek(0);
+	    }
+	  else
+	    {
+	      DefaultLogSink().Error("walk_parts SeekToRIP failed: %s\n", result.Label());
+	    }
+
+	  if ( ASDCP_SUCCESS(result) )
+	    {
+	      RIP.Dump();
+
+	      MXF::Array<MXF::RIP::Pair>::const_iterator i;
+	      for ( i = RIP.PairArray.begin(); i != RIP.PairArray.end(); ++i )
+		{
+		  Reader.Seek(i->ByteOffset);
+		  MXF::Partition plain_part(Dict);
+		  plain_part.InitFromFile(Reader);
+
+		  if ( plain_part.ThisPartition != i->ByteOffset )
+		    {
+		      DefaultLogSink().Error("ThisPartition value error: wanted=%qu, got=%qu\n",
+					     plain_part.ThisPartition, i->ByteOffset);
+		    }
+
+		  plain_part.Dump();
+		}
+	    }
 	}
       else // dump klv
 	{

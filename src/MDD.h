@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MDD.[h|cpp]
-    \version $Id: MDD.h,v 1.25 2012/02/02 01:58:43 jhurst Exp $
+    \version $Id: MDD.h,v 1.31 2013/07/02 17:16:27 jhurst Exp $
     \brief   MXF Metadata Dictionary
 */
 
@@ -209,7 +209,7 @@ namespace ASDCP {
         MDD_GenericPictureEssenceDescriptor_ActiveFormatDescriptor,  // 171
         MDD_GenericPictureEssenceDescriptor_VideoLineMap,  // 172
         MDD_GenericPictureEssenceDescriptor_AlphaTransparency,  // 173
-        MDD_GenericPictureEssenceDescriptor_Gamma,  // 174
+        MDD_GenericPictureEssenceDescriptor_TransferCharacteristic,  // 174
         MDD_GenericPictureEssenceDescriptor_ImageAlignmentOffset,  // 175
         MDD_GenericPictureEssenceDescriptor_ImageStartOffset,  // 176
         MDD_GenericPictureEssenceDescriptor_ImageEndOffset,  // 177
@@ -243,7 +243,7 @@ namespace ASDCP {
         MDD_GenericSoundEssenceDescriptor_ChannelCount,  // 205
         MDD_GenericSoundEssenceDescriptor_QuantizationBits,  // 206
         MDD_GenericSoundEssenceDescriptor_DialNorm,  // 207
-        MDD_GenericSoundEssenceDescriptor_SoundEssenceCompression,  // 208
+        MDD_GenericSoundEssenceDescriptor_SoundEssenceCoding,  // 208
         MDD_GenericDataEssenceDescriptor,  // 209
         MDD_GenericDataEssenceDescriptor_DataEssenceCoding,  // 210
         MDD_MultipleDescriptor,  // 211
@@ -355,8 +355,57 @@ namespace ASDCP {
 	MDD_DCAudioChannel_Cs, // 317
 	MDD_DCAudioChannel_HI, // 318
 	MDD_DCAudioChannel_VIN, // 319
+	MDD_DCAudioSoundfield_51, // 320
+	MDD_DCAudioSoundfield_71, // 321
+	MDD_DCAudioSoundfield_SDS, // 322
+	MDD_DCAudioSoundfield_61, // 323
+	MDD_DCAudioSoundfield_M, // 324
+	MDD_WAVEssenceClip, // 325
+	MDD_IMFAudioChannelCfg_MCA, // 326
+	MDD_IMFAudioChannel_M1, // 327
+	MDD_IMFAudioChannel_M2, // 328
+	MDD_IMFAudioChannel_Lt, // 329
+	MDD_IMFAudioChannel_Rt, // 330
+	MDD_IMFAudioChannel_Lst, // 331
+	MDD_IMFAudioChannel_Rst, // 332
+	MDD_IMFAudioChannel_S, // 333
+	MDD_IMFNumberedSourceChannel, // 334
+	MDD_IMFAudioSoundfield_ST, // 335
+	MDD_IMFAudioSoundfield_DM, // 336
+	MDD_IMFAudioSoundfield_DNS, // 337
+	MDD_IMFAudioSoundfield_30, // 338
+	MDD_IMFAudioSoundfield_40, // 339
+	MDD_IMFAudioSoundfield_50, // 340
+	MDD_IMFAudioSoundfield_60, // 341
+	MDD_IMFAudioSoundfield_70, // 342
+	MDD_IMFAudioSoundfield_LtRt, // 343
+	MDD_IMFAudioSoundfield_51Ex, // 344
+	MDD_IMFAudioSoundfield_HI, // 345
+	MDD_IMFAudioSoundfield_VIN, // 346
+	MDD_IMFAudioGroup_MPg, // 347
+	MDD_IMFAudioGroup_DVS, // 348
+	MDD_IMFAudioGroup_Dcm, // 349
+	MDD_MaterialPackage_PackageMarker, // 350
+	MDD_GenericPictureEssenceDescriptor_CodingEquations, // 351
+	MDD_GenericPictureEssenceDescriptor_ColorPrimaries, // 352
+	MDD_JP2KEssenceCompression_BroadcastProfile_1, // 353
+	MDD_JP2KEssenceCompression_BroadcastProfile_2, // 354
+	MDD_JP2KEssenceCompression_BroadcastProfile_3, // 355
+	MDD_JP2KEssenceCompression_BroadcastProfile_4, // 356
+	MDD_JP2KEssenceCompression_BroadcastProfile_5, // 357
+	MDD_JP2KEssenceCompression_BroadcastProfile_6, // 358
+	MDD_JP2KEssenceCompression_BroadcastProfile_7, // 359
+	MDD_WaveAudioDescriptor_ReferenceImageEditRate, // 360
+	MDD_WaveAudioDescriptor_ReferenceAudioAlignmentLevel, // 361
+	MDD_GenericPictureEssenceDescriptor_AlternativeCenterCuts, // 362
+	MDD_GenericPictureEssenceDescriptor_ActiveHeight, // 363
+	MDD_GenericPictureEssenceDescriptor_ActiveWidth, // 364
+	MDD_GenericPictureEssenceDescriptor_ActiveXOffset, // 365
+	MDD_GenericPictureEssenceDescriptor_ActiveYOffset, // 366
+	MDD_TimedTextDescriptor_RFC5646LanguageTagList, // 367
+	MDD_AlternativeCenterCuts_4x3, // 368
+	MDD_AlternativeCenterCuts_14x9, // 369
         MDD_Max
-
     }; // enum MDD_t
 
     //

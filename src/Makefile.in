@@ -15,8 +15,9 @@
 @SET_MAKE@
 
 #
-# $Id: Makefile.am,v 1.63 2013/02/08 19:11:58 jhurst Exp $
-# Copyright (c) 2007-2011 John Hurst. All rights reserved.
+# $Id: Makefile.am,v 1.70 2013/07/02 20:52:54 mikey Exp $
+#
+# Copyright (c) 2007-2013 John Hurst. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -92,21 +93,27 @@ host_triplet = @host@
 @DEV_HEADERS_TRUE@	PCMParserList.h \
 @DEV_HEADERS_TRUE@	AtmosSyncChannel_Generator.h
 
-@DEV_HEADERS_TRUE@am__append_5 = TimedText_Transform.h TimedText_Transform.cpp
+@USE_AS_02_TRUE@am__append_5 = AS_02.h
+@USE_AS_02_TRUE@am__append_6 = libas02.la
+@DEV_HEADERS_TRUE@am__append_7 = TimedText_Transform.h TimedText_Transform.cpp
 
 # Python extension
-@PYTHON_USE_TRUE@am__append_6 = libpyasdcp.la
+@PYTHON_USE_TRUE@am__append_8 = libpyasdcp.la
 bin_PROGRAMS = asdcp-wrap$(EXEEXT) asdcp-unwrap$(EXEEXT) \
 	asdcp-util$(EXEEXT) asdcp-info$(EXEEXT) asdcp-test$(EXEEXT) \
 	j2c-test$(EXEEXT) blackwave$(EXEEXT) klvwalk$(EXEEXT) \
-	wavesplit$(EXEEXT) kmfilegen$(EXEEXT) kmrandgen$(EXEEXT) \
-	kmuuidgen$(EXEEXT)
+	wavesplit$(EXEEXT) klvsplit$(EXEEXT) kmfilegen$(EXEEXT) \
+	kmrandgen$(EXEEXT) kmuuidgen$(EXEEXT) $(am__EXEEXT_1)
+@USE_AS_02_TRUE@am__append_9 = \
+@USE_AS_02_TRUE@	as-02-wrap \
+@USE_AS_02_TRUE@	as-02-unwrap
+
 check_PROGRAMS = asdcp-mem-test$(EXEEXT) path-test$(EXEEXT) \
 	fips-186-rng-test$(EXEEXT) asdcp-version$(EXEEXT) \
-	$(am__EXEEXT_1)
-@DEV_HEADERS_TRUE@am__append_7 = tt-xform
-@DEV_HEADERS_TRUE@@FREEDIST_FALSE@am__append_8 = $(nodist_libasdcp_la_SOURCES) $(nodist_tt_xform_SOURCES)
-@FREEDIST_FALSE@@PYTHON_USE_TRUE@am__append_9 = $(nodist_pyexec_include_HEADERS) $(nodist_libpyasdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) $(nodist_asdcp_la_SOURCES)
+	$(am__EXEEXT_2)
+@DEV_HEADERS_TRUE@am__append_10 = tt-xform
+@DEV_HEADERS_TRUE@@FREEDIST_FALSE@am__append_11 = $(nodist_libasdcp_la_SOURCES) $(nodist_tt_xform_SOURCES)
+@FREEDIST_FALSE@@PYTHON_USE_TRUE@am__append_12 = $(nodist_pyexec_include_HEADERS) $(nodist_libpyasdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) $(nodist_asdcp_la_SOURCES)
 subdir = src
 DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/build-aux/depcomp
@@ -168,6 +175,18 @@ kumu_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(kumu_la_LDFLAGS) $(LDFLAGS) -o $@
 @PYTHON_USE_TRUE@am_kumu_la_rpath = -rpath $(pyexecdir)
+@USE_AS_02_TRUE@libas02_la_DEPENDENCIES = libasdcp.la libkumu.la
+am__libas02_la_SOURCES_DIST = AS_02.h AS_02_internal.h \
+	h__02_Reader.cpp h__02_Writer.cpp AS_02_JP2K.cpp AS_02_PCM.cpp
+@USE_AS_02_TRUE@am_libas02_la_OBJECTS = libas02_la-h__02_Reader.lo \
+@USE_AS_02_TRUE@	libas02_la-h__02_Writer.lo \
+@USE_AS_02_TRUE@	libas02_la-AS_02_JP2K.lo \
+@USE_AS_02_TRUE@	libas02_la-AS_02_PCM.lo
+libas02_la_OBJECTS = $(am_libas02_la_OBJECTS)
+libas02_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(libas02_la_LDFLAGS) $(LDFLAGS) -o $@
+@USE_AS_02_TRUE@am_libas02_la_rpath = -rpath $(libdir)
 libasdcp_la_DEPENDENCIES = libkumu.la
 am_libasdcp_la_OBJECTS = libasdcp_la-MPEG2_Parser.lo \
 	libasdcp_la-MPEG.lo libasdcp_la-JP2K_Codestream_Parser.lo \
@@ -217,8 +236,18 @@ libpyasdcp_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libpyasdcp_la_LDFLAGS) $(LDFLAGS) -o $@
 @PYTHON_USE_TRUE@am_libpyasdcp_la_rpath = -rpath $(libdir)
-@DEV_HEADERS_TRUE@am__EXEEXT_1 = tt-xform$(EXEEXT)
+@USE_AS_02_TRUE@am__EXEEXT_1 = as-02-wrap$(EXEEXT) \
+@USE_AS_02_TRUE@	as-02-unwrap$(EXEEXT)
+@DEV_HEADERS_TRUE@am__EXEEXT_2 = tt-xform$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
+am__as_02_unwrap_SOURCES_DIST = as-02-unwrap.cpp
+@USE_AS_02_TRUE@am_as_02_unwrap_OBJECTS = as-02-unwrap.$(OBJEXT)
+as_02_unwrap_OBJECTS = $(am_as_02_unwrap_OBJECTS)
+@USE_AS_02_TRUE@as_02_unwrap_DEPENDENCIES = libas02.la
+am__as_02_wrap_SOURCES_DIST = as-02-wrap.cpp
+@USE_AS_02_TRUE@am_as_02_wrap_OBJECTS = as-02-wrap.$(OBJEXT)
+as_02_wrap_OBJECTS = $(am_as_02_wrap_OBJECTS)
+@USE_AS_02_TRUE@as_02_wrap_DEPENDENCIES = libas02.la
 am_asdcp_info_OBJECTS = asdcp-info.$(OBJEXT)
 asdcp_info_OBJECTS = $(am_asdcp_info_OBJECTS)
 asdcp_info_DEPENDENCIES = libasdcp.la
@@ -249,6 +278,9 @@ fips_186_rng_test_DEPENDENCIES = libasdcp.la
 am_j2c_test_OBJECTS = j2c-test.$(OBJEXT)
 j2c_test_OBJECTS = $(am_j2c_test_OBJECTS)
 j2c_test_DEPENDENCIES = libasdcp.la
+am_klvsplit_OBJECTS = klvsplit.$(OBJEXT)
+klvsplit_OBJECTS = $(am_klvsplit_OBJECTS)
+klvsplit_DEPENDENCIES = libasdcp.la
 am_klvwalk_OBJECTS = klvwalk.$(OBJEXT)
 klvwalk_OBJECTS = $(am_klvwalk_OBJECTS)
 klvwalk_DEPENDENCIES = libasdcp.la
@@ -293,24 +325,28 @@ CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 SOURCES = $(nodist_asdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) \
-	$(libasdcp_la_SOURCES) $(nodist_libasdcp_la_SOURCES) \
-	$(libkumu_la_SOURCES) $(nodist_libpyasdcp_la_SOURCES) \
-	$(asdcp_info_SOURCES) $(asdcp_mem_test_SOURCES) \
-	$(asdcp_test_SOURCES) $(asdcp_unwrap_SOURCES) \
-	$(asdcp_util_SOURCES) $(asdcp_version_SOURCES) \
-	$(asdcp_wrap_SOURCES) $(blackwave_SOURCES) \
-	$(fips_186_rng_test_SOURCES) $(j2c_test_SOURCES) \
-	$(klvwalk_SOURCES) $(kmfilegen_SOURCES) $(kmrandgen_SOURCES) \
-	$(kmuuidgen_SOURCES) $(path_test_SOURCES) \
-	$(nodist_tt_xform_SOURCES) $(wavesplit_SOURCES)
-DIST_SOURCES = $(libasdcp_la_SOURCES) $(libkumu_la_SOURCES) \
-	$(asdcp_info_SOURCES) $(asdcp_mem_test_SOURCES) \
-	$(asdcp_test_SOURCES) $(asdcp_unwrap_SOURCES) \
-	$(asdcp_util_SOURCES) $(asdcp_version_SOURCES) \
-	$(asdcp_wrap_SOURCES) $(blackwave_SOURCES) \
-	$(fips_186_rng_test_SOURCES) $(j2c_test_SOURCES) \
-	$(klvwalk_SOURCES) $(kmfilegen_SOURCES) $(kmrandgen_SOURCES) \
-	$(kmuuidgen_SOURCES) $(path_test_SOURCES) $(wavesplit_SOURCES)
+	$(libas02_la_SOURCES) $(libasdcp_la_SOURCES) \
+	$(nodist_libasdcp_la_SOURCES) $(libkumu_la_SOURCES) \
+	$(nodist_libpyasdcp_la_SOURCES) $(as_02_unwrap_SOURCES) \
+	$(as_02_wrap_SOURCES) $(asdcp_info_SOURCES) \
+	$(asdcp_mem_test_SOURCES) $(asdcp_test_SOURCES) \
+	$(asdcp_unwrap_SOURCES) $(asdcp_util_SOURCES) \
+	$(asdcp_version_SOURCES) $(asdcp_wrap_SOURCES) \
+	$(blackwave_SOURCES) $(fips_186_rng_test_SOURCES) \
+	$(j2c_test_SOURCES) $(klvsplit_SOURCES) $(klvwalk_SOURCES) \
+	$(kmfilegen_SOURCES) $(kmrandgen_SOURCES) $(kmuuidgen_SOURCES) \
+	$(path_test_SOURCES) $(nodist_tt_xform_SOURCES) \
+	$(wavesplit_SOURCES)
+DIST_SOURCES = $(am__libas02_la_SOURCES_DIST) $(libasdcp_la_SOURCES) \
+	$(libkumu_la_SOURCES) $(am__as_02_unwrap_SOURCES_DIST) \
+	$(am__as_02_wrap_SOURCES_DIST) $(asdcp_info_SOURCES) \
+	$(asdcp_mem_test_SOURCES) $(asdcp_test_SOURCES) \
+	$(asdcp_unwrap_SOURCES) $(asdcp_util_SOURCES) \
+	$(asdcp_version_SOURCES) $(asdcp_wrap_SOURCES) \
+	$(blackwave_SOURCES) $(fips_186_rng_test_SOURCES) \
+	$(j2c_test_SOURCES) $(klvsplit_SOURCES) $(klvwalk_SOURCES) \
+	$(kmfilegen_SOURCES) $(kmrandgen_SOURCES) $(kmuuidgen_SOURCES) \
+	$(path_test_SOURCES) $(wavesplit_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -319,7 +355,8 @@ am__can_run_installinfo = \
 am__include_HEADERS_DIST = KM_error.h KM_fileio.h KM_log.h KM_memio.h \
 	KM_mutex.h KM_platform.h KM_prng.h KM_util.h KM_tai.h KM_xml.h \
 	AS_DCP.h S12MTimecode.h MDD.h Metadata.h KLV.h MXFTypes.h \
-	MXF.h Wav.h PCMParserList.h AtmosSyncChannel_Generator.h
+	MXF.h Wav.h PCMParserList.h AtmosSyncChannel_Generator.h \
+	AS_02.h
 HEADERS = $(include_HEADERS) $(nodist_include_HEADERS) \
 	$(nodist_pyexec_include_HEADERS)
 ETAGS = etags
@@ -475,11 +512,12 @@ AM_LDFLAGS = $(am__append_2)
 # list of all the header files that should be installed
 include_HEADERS = KM_error.h KM_fileio.h KM_log.h KM_memio.h \
 	KM_mutex.h KM_platform.h KM_prng.h KM_util.h KM_tai.h KM_xml.h \
-	AS_DCP.h $(am__append_4)
+	AS_DCP.h $(am__append_4) $(am__append_5)
 @DEV_HEADERS_TRUE@nodist_include_HEADERS = TimedText_Transform.h
 
 # list of the libraries to build and install
-lib_LTLIBRARIES = libkumu.la libasdcp.la $(am__append_6)
+lib_LTLIBRARIES = libkumu.la libasdcp.la $(am__append_6) \
+	$(am__append_8)
 
 # sources for kumu library
 libkumu_la_SOURCES = KM_error.h KM_fileio.cpp KM_fileio.h KM_log.cpp KM_log.h \
@@ -493,29 +531,42 @@ libkumu_la_LDFLAGS = -release @VERSION@
 # sources for asdcp library that don't get added to a distribution
 nodist_libasdcp_la_SOURCES = Metadata_h.tt2 Metadata_cpp.tt2 mxfgen.pl \
 	MXF_def.pl ullist.pl ULList.xml dict.xml DMS_Crypto.xml \
-	$(am__append_5)
+	$(am__append_7)
 # sources for asdcp library
 libasdcp_la_SOURCES = MPEG2_Parser.cpp MPEG.cpp JP2K_Codestream_Parser.cpp \
-		JP2K_Sequence_Parser.cpp JP2K.cpp PCM_Parser.cpp Wav.cpp \
-		TimedText_Parser.cpp KLV.cpp Dict.cpp MXFTypes.cpp MXF.cpp \
-		Index.cpp Metadata.cpp AS_DCP.cpp AS_DCP_MXF.cpp AS_DCP_AES.cpp \
-		h__Reader.cpp h__Writer.cpp AS_DCP_MPEG2.cpp AS_DCP_JP2K.cpp \
-		AS_DCP_PCM.cpp AS_DCP_TimedText.cpp PCMParserList.cpp \
-		Wav.h WavFileWriter.h MXF.h Metadata.h \
-		JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h \
-		PCMParserList.h S12MTimecode.h MDD.cpp \
-		AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp AS_DCP_DCData_internal.h \
-		DCData_ByteStream_Parser.cpp DCData_Sequence_Parser.cpp \
-		AtmosSyncChannel_Generator.cpp AtmosSyncChannel_Generator.h \
-		AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
-		PCMDataProviders.cpp PCMDataProviders.h \
-		SyncEncoder.c SyncEncoder.h SyncCommon.h CRC16.c CRC16.h \
-		UUIDInformation.c UUIDInformation.h
+	JP2K_Sequence_Parser.cpp JP2K.cpp PCM_Parser.cpp Wav.cpp \
+	TimedText_Parser.cpp KLV.cpp Dict.cpp MXFTypes.cpp MXF.cpp \
+	Index.cpp Metadata.cpp AS_DCP.cpp AS_DCP_MXF.cpp AS_DCP_AES.cpp \
+	h__Reader.cpp h__Writer.cpp AS_DCP_MPEG2.cpp AS_DCP_JP2K.cpp \
+	AS_DCP_PCM.cpp AS_DCP_TimedText.cpp PCMParserList.cpp \
+	Wav.h WavFileWriter.h MXF.h Metadata.h \
+	JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h \
+	PCMParserList.h S12MTimecode.h MDD.cpp \
+	AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp AS_DCP_DCData_internal.h \
+	DCData_ByteStream_Parser.cpp DCData_Sequence_Parser.cpp \
+	AtmosSyncChannel_Generator.cpp AtmosSyncChannel_Generator.h \
+	AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
+	PCMDataProviders.cpp PCMDataProviders.h \
+	SyncEncoder.c SyncEncoder.h SyncCommon.h CRC16.c CRC16.h \
+	UUIDInformation.c UUIDInformation.h
 
 libasdcp_la_LDFLAGS = -release @VERSION@
 # additional libraries to link against for a library
 libasdcp_la_LIBADD = libkumu.la
 libasdcp_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
+
+# sources for as-02 library
+@USE_AS_02_TRUE@libas02_la_SOURCES = \
+@USE_AS_02_TRUE@	AS_02.h \
+@USE_AS_02_TRUE@	AS_02_internal.h \
+@USE_AS_02_TRUE@	h__02_Reader.cpp \
+@USE_AS_02_TRUE@	h__02_Writer.cpp \
+@USE_AS_02_TRUE@	AS_02_JP2K.cpp \
+@USE_AS_02_TRUE@	AS_02_PCM.cpp
+
+@USE_AS_02_TRUE@libas02_la_LDFLAGS = -release @VERSION@
+@USE_AS_02_TRUE@libas02_la_LIBADD = libasdcp.la libkumu.la
+@USE_AS_02_TRUE@libas02_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
 @PYTHON_USE_TRUE@nodist_libpyasdcp_la_SOURCES = \
 @PYTHON_USE_TRUE@	kumu_python.cpp \
 @PYTHON_USE_TRUE@	kumu_python.h \
@@ -571,6 +622,12 @@ wavesplit_SOURCES = wavesplit.cpp
 wavesplit_LDADD = libasdcp.la
 j2c_test_SOURCES = j2c-test.cpp
 j2c_test_LDADD = libasdcp.la
+klvsplit_SOURCES = klvsplit.cpp
+klvsplit_LDADD = libasdcp.la
+@USE_AS_02_TRUE@as_02_wrap_SOURCES = as-02-wrap.cpp
+@USE_AS_02_TRUE@as_02_wrap_LDADD = libas02.la
+@USE_AS_02_TRUE@as_02_unwrap_SOURCES = as-02-unwrap.cpp
+@USE_AS_02_TRUE@as_02_unwrap_LDADD = libas02.la
 
 # sources for a test program
 # list of libraries to link against for a test program
@@ -598,8 +655,8 @@ TESTS_ENVIRONMENT = BUILD_DIR="." TEST_FILES=../tests TEST_FILE_PREFIX=DCPd1-M1 
 
 
 # files to include in the distribution that automake doesn't automatically include
-EXTRA_DIST = fips-186-test-harness.pl $(TESTS) $(am__append_8) \
-	$(am__append_9)
+EXTRA_DIST = fips-186-test-harness.pl $(TESTS) $(am__append_11) \
+	$(am__append_12)
 
 # source files that are themselves built
 BUILT_SOURCES = Metadata.h Metadata.cpp MDD.h MDD.cpp
@@ -712,6 +769,8 @@ asdcp.la: $(asdcp_la_OBJECTS) $(asdcp_la_DEPENDENCIES) $(EXTRA_asdcp_la_DEPENDEN
 	$(asdcp_la_LINK) $(am_asdcp_la_rpath) $(asdcp_la_OBJECTS) $(asdcp_la_LIBADD) $(LIBS)
 kumu.la: $(kumu_la_OBJECTS) $(kumu_la_DEPENDENCIES) $(EXTRA_kumu_la_DEPENDENCIES) 
 	$(kumu_la_LINK) $(am_kumu_la_rpath) $(kumu_la_OBJECTS) $(kumu_la_LIBADD) $(LIBS)
+libas02.la: $(libas02_la_OBJECTS) $(libas02_la_DEPENDENCIES) $(EXTRA_libas02_la_DEPENDENCIES) 
+	$(libas02_la_LINK) $(am_libas02_la_rpath) $(libas02_la_OBJECTS) $(libas02_la_LIBADD) $(LIBS)
 libasdcp.la: $(libasdcp_la_OBJECTS) $(libasdcp_la_DEPENDENCIES) $(EXTRA_libasdcp_la_DEPENDENCIES) 
 	$(libasdcp_la_LINK) -rpath $(libdir) $(libasdcp_la_OBJECTS) $(libasdcp_la_LIBADD) $(LIBS)
 libkumu.la: $(libkumu_la_OBJECTS) $(libkumu_la_DEPENDENCIES) $(EXTRA_libkumu_la_DEPENDENCIES) 
@@ -773,6 +832,12 @@ clean-checkPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+as-02-unwrap$(EXEEXT): $(as_02_unwrap_OBJECTS) $(as_02_unwrap_DEPENDENCIES) $(EXTRA_as_02_unwrap_DEPENDENCIES) 
+	@rm -f as-02-unwrap$(EXEEXT)
+	$(CXXLINK) $(as_02_unwrap_OBJECTS) $(as_02_unwrap_LDADD) $(LIBS)
+as-02-wrap$(EXEEXT): $(as_02_wrap_OBJECTS) $(as_02_wrap_DEPENDENCIES) $(EXTRA_as_02_wrap_DEPENDENCIES) 
+	@rm -f as-02-wrap$(EXEEXT)
+	$(CXXLINK) $(as_02_wrap_OBJECTS) $(as_02_wrap_LDADD) $(LIBS)
 asdcp-info$(EXEEXT): $(asdcp_info_OBJECTS) $(asdcp_info_DEPENDENCIES) $(EXTRA_asdcp_info_DEPENDENCIES) 
 	@rm -f asdcp-info$(EXEEXT)
 	$(CXXLINK) $(asdcp_info_OBJECTS) $(asdcp_info_LDADD) $(LIBS)
@@ -803,6 +868,9 @@ fips-186-rng-test$(EXEEXT): $(fips_186_rng_test_OBJECTS) $(fips_186_rng_test_DEP
 j2c-test$(EXEEXT): $(j2c_test_OBJECTS) $(j2c_test_DEPENDENCIES) $(EXTRA_j2c_test_DEPENDENCIES) 
 	@rm -f j2c-test$(EXEEXT)
 	$(CXXLINK) $(j2c_test_OBJECTS) $(j2c_test_LDADD) $(LIBS)
+klvsplit$(EXEEXT): $(klvsplit_OBJECTS) $(klvsplit_DEPENDENCIES) $(EXTRA_klvsplit_DEPENDENCIES) 
+	@rm -f klvsplit$(EXEEXT)
+	$(CXXLINK) $(klvsplit_OBJECTS) $(klvsplit_LDADD) $(LIBS)
 klvwalk$(EXEEXT): $(klvwalk_OBJECTS) $(klvwalk_DEPENDENCIES) $(EXTRA_klvwalk_DEPENDENCIES) 
 	@rm -f klvwalk$(EXEEXT)
 	$(CXXLINK) $(klvwalk_OBJECTS) $(klvwalk_LDADD) $(LIBS)
@@ -837,6 +905,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_tai.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_xml.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/as-02-unwrap.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/as-02-wrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asdcp-info.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asdcp-mem-test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asdcp-test.Po@am__quote@
@@ -848,11 +918,16 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/blackwave.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fips-186-rng-test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/j2c-test.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klvsplit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klvwalk.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kmfilegen.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kmrandgen.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kmuuidgen.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kumu_la-pykumu.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libas02_la-AS_02_JP2K.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libas02_la-AS_02_PCM.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libas02_la-h__02_Reader.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libas02_la-h__02_Writer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libasdcp_la-AS_DCP.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libasdcp_la-AS_DCP_AES.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libasdcp_la-AS_DCP_ATMOS.Plo@am__quote@
@@ -976,6 +1051,34 @@ kumu_la-pykumu.lo: pykumu.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='pykumu.cpp' object='kumu_la-pykumu.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(kumu_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o kumu_la-pykumu.lo `test -f 'pykumu.cpp' || echo '$(srcdir)/'`pykumu.cpp
+
+libas02_la-h__02_Reader.lo: h__02_Reader.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT libas02_la-h__02_Reader.lo -MD -MP -MF $(DEPDIR)/libas02_la-h__02_Reader.Tpo -c -o libas02_la-h__02_Reader.lo `test -f 'h__02_Reader.cpp' || echo '$(srcdir)/'`h__02_Reader.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libas02_la-h__02_Reader.Tpo $(DEPDIR)/libas02_la-h__02_Reader.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='h__02_Reader.cpp' object='libas02_la-h__02_Reader.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o libas02_la-h__02_Reader.lo `test -f 'h__02_Reader.cpp' || echo '$(srcdir)/'`h__02_Reader.cpp
+
+libas02_la-h__02_Writer.lo: h__02_Writer.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT libas02_la-h__02_Writer.lo -MD -MP -MF $(DEPDIR)/libas02_la-h__02_Writer.Tpo -c -o libas02_la-h__02_Writer.lo `test -f 'h__02_Writer.cpp' || echo '$(srcdir)/'`h__02_Writer.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libas02_la-h__02_Writer.Tpo $(DEPDIR)/libas02_la-h__02_Writer.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='h__02_Writer.cpp' object='libas02_la-h__02_Writer.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o libas02_la-h__02_Writer.lo `test -f 'h__02_Writer.cpp' || echo '$(srcdir)/'`h__02_Writer.cpp
+
+libas02_la-AS_02_JP2K.lo: AS_02_JP2K.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT libas02_la-AS_02_JP2K.lo -MD -MP -MF $(DEPDIR)/libas02_la-AS_02_JP2K.Tpo -c -o libas02_la-AS_02_JP2K.lo `test -f 'AS_02_JP2K.cpp' || echo '$(srcdir)/'`AS_02_JP2K.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libas02_la-AS_02_JP2K.Tpo $(DEPDIR)/libas02_la-AS_02_JP2K.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='AS_02_JP2K.cpp' object='libas02_la-AS_02_JP2K.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o libas02_la-AS_02_JP2K.lo `test -f 'AS_02_JP2K.cpp' || echo '$(srcdir)/'`AS_02_JP2K.cpp
+
+libas02_la-AS_02_PCM.lo: AS_02_PCM.cpp
+@am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT libas02_la-AS_02_PCM.lo -MD -MP -MF $(DEPDIR)/libas02_la-AS_02_PCM.Tpo -c -o libas02_la-AS_02_PCM.lo `test -f 'AS_02_PCM.cpp' || echo '$(srcdir)/'`AS_02_PCM.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/libas02_la-AS_02_PCM.Tpo $(DEPDIR)/libas02_la-AS_02_PCM.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='AS_02_PCM.cpp' object='libas02_la-AS_02_PCM.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libas02_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o libas02_la-AS_02_PCM.lo `test -f 'AS_02_PCM.cpp' || echo '$(srcdir)/'`AS_02_PCM.cpp
 
 libasdcp_la-MPEG2_Parser.lo: MPEG2_Parser.cpp
 @am__fastdepCXX_TRUE@	$(LIBTOOL)  --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libasdcp_la_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT libasdcp_la-MPEG2_Parser.lo -MD -MP -MF $(DEPDIR)/libasdcp_la-MPEG2_Parser.Tpo -c -o libasdcp_la-MPEG2_Parser.lo `test -f 'MPEG2_Parser.cpp' || echo '$(srcdir)/'`MPEG2_Parser.cpp

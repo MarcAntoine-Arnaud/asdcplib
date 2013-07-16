@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXFTypes.h
-    \version $Id: MXFTypes.h,v 1.30 2012/03/15 17:54:15 jhurst Exp $
+    \version $Id: MXFTypes.h,v 1.33 2013/07/02 05:51:18 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -43,6 +43,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // these are used below to manufacture arguments
 #define OBJ_READ_ARGS(s,l) m_Dict->Type(MDD_##s##_##l), &l
 #define OBJ_WRITE_ARGS(s,l) m_Dict->Type(MDD_##s##_##l), &l
+#define OBJ_READ_ARGS_OPT(s,l) m_Dict->Type(MDD_##s##_##l), &l.get()
+#define OBJ_WRITE_ARGS_OPT(s,l) m_Dict->Type(MDD_##s##_##l), &l.get()
 #define OBJ_TYPE_ARGS(t) m_Dict->Type(MDD_##t).ul
 
 
@@ -241,6 +243,8 @@ namespace ASDCP
 	{
 	public:
 	  ISO8String() {}
+	  ISO8String(const char*);
+	  ISO8String(const std::string&);
 	  ~ISO8String() {}
 
 	  const ISO8String& operator=(const char*);
@@ -258,6 +262,8 @@ namespace ASDCP
 	{
 	public:
 	  UTF16String() {}
+	  UTF16String(const char*);
+	  UTF16String(const std::string&);
 	  ~UTF16String() {}
 
 	  const UTF16String& operator=(const char*);
@@ -325,7 +331,7 @@ namespace ASDCP
       class VersionType : public Kumu::IArchive
 	{
 	public:
-	  enum Release_t { RL_UNKNOWN, RL_RELEASE, RL_DEVELOPMENT, RL_PATCHED, RL_BETA, RL_PRIVATE };
+	  enum Release_t { RL_UNKNOWN, RL_RELEASE, RL_DEVELOPMENT, RL_PATCHED, RL_BETA, RL_PRIVATE, RL_MAX };
 	  ui16_t Major;
 	  ui16_t Minor;
 	  ui16_t Patch;

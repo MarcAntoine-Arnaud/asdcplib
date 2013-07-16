@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_platform.h
-    \version $Id: KM_platform.h,v 1.7 2012/03/15 17:54:15 jhurst Exp $
+    \version $Id: KM_platform.h,v 1.8 2013/05/28 18:13:12 jhurst Exp $
     \brief   platform portability
   */
 
@@ -166,7 +166,7 @@ namespace Kumu
       ~mem_ptr() { delete m_p; }
 
       inline T&   operator*()  const { return *m_p; }
-      inline T*   operator->() const { return m_p; }
+      inline T*   operator->() const { assert(m_p!=0); return m_p; }
       inline      operator T*()const { return m_p; }
       inline const mem_ptr<T>& operator=(T* p) { this->set(p); return *this; }
       inline T*   set(T* p)          { delete m_p; m_p = p; return m_p; }
