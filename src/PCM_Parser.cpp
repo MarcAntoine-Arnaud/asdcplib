@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    PCM_Parser.cpp
-    \version $Id: PCM_Parser.cpp,v 1.8 2013/04/12 23:39:31 mikey Exp $
+    \version $Id: PCM_Parser.cpp,v 1.9 2014/01/02 23:29:22 jhurst Exp $
     \brief   AS-DCP library, PCM raw essence reader implementation
 */
 
@@ -69,7 +69,7 @@ public:
     Close();
    }
 
-  Result_t OpenRead(const char* filename, const Rational& PictureRate);
+  Result_t OpenRead(const std::string& filename, const Rational& PictureRate);
   void     Close();
   void     Reset();
   Result_t ReadFrame(FrameBuffer&);
@@ -94,10 +94,8 @@ ASDCP::PCM::WAVParser::h__WAVParser::Reset()
 
 //
 ASDCP::Result_t
-ASDCP::PCM::WAVParser::h__WAVParser::OpenRead(const char* filename, const Rational& PictureRate)
+ASDCP::PCM::WAVParser::h__WAVParser::OpenRead(const std::string& filename, const Rational& PictureRate)
 {
-  ASDCP_TEST_NULL_STR(filename);
-
   Result_t result = m_FileReader.OpenRead(filename);
 
   if ( ASDCP_SUCCESS(result) )
@@ -203,7 +201,7 @@ ASDCP::PCM::WAVParser::~WAVParser()
 // Opens the stream for reading, parses enough data to provide a complete
 // set of stream metadata for the MXFWriter below.
 ASDCP::Result_t
-ASDCP::PCM::WAVParser::OpenRead(const char* filename, const Rational& PictureRate) const
+ASDCP::PCM::WAVParser::OpenRead(const std::string& filename, const Rational& PictureRate) const
 {
   const_cast<ASDCP::PCM::WAVParser*>(this)->m_Parser = new h__WAVParser;
 

@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    h__Writer.cpp
-    \version $Id: h__Writer.cpp,v 1.56 2013/06/12 01:16:16 jhurst Exp $
+    \version $Id: h__Writer.cpp,v 1.57 2013/09/02 22:00:08 jhurst Exp $
     \brief   MXF file writer base class
 */
 
@@ -39,13 +39,7 @@ using namespace ASDCP::MXF;
 ui32_t
 ASDCP::derive_timecode_rate_from_edit_rate(const ASDCP::Rational& edit_rate)
 {
-  double edit_rate_real = edit_rate.Quotient();
-  if ( ceil(edit_rate_real) == floor(edit_rate_real) )
-    {
-      return ceil(edit_rate_real);
-    }
-
-  return ( edit_rate_real - floor(edit_rate_real) < 0.5 ) ? floor(edit_rate_real) : ceil(edit_rate_real);
+  return floor(0.5 + edit_rate.Quotient());
 }
 
 //

@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_JP2k.cpp
-    \version $Id: AS_DCP_JP2K.cpp,v 1.63 2013/07/02 17:16:27 jhurst Exp $
+    \version $Id: AS_DCP_JP2K.cpp,v 1.65 2014/01/02 23:29:22 jhurst Exp $
     \brief   AS-DCP library, JPEG 2000 essence reader and writer implementation
 */
 
@@ -208,39 +208,26 @@ static const byte_t s_PixelLayoutXYZ[PixelLayoutSize] = { 0xd8, 0x0c, 0xd9, 0x0c
 ASDCP::Result_t
 ASDCP::JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
 			const ASDCP::Dictionary& dict,
-			ASDCP::MXF::RGBAEssenceDescriptor *EssenceDescriptor,
-			ASDCP::MXF::JPEG2000PictureSubDescriptor *EssenceSubDescriptor)
+			ASDCP::MXF::GenericPictureEssenceDescriptor& EssenceDescriptor,
+			ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor)
 {
-  if ( EssenceDescriptor == 0 || EssenceSubDescriptor == 0 )
-    return RESULT_PTR;
+  EssenceDescriptor.ContainerDuration = PDesc.ContainerDuration;
+  EssenceDescriptor.SampleRate = PDesc.EditRate;
+  EssenceDescriptor.FrameLayout = 0;
+  EssenceDescriptor.StoredWidth = PDesc.StoredWidth;
+  EssenceDescriptor.StoredHeight = PDesc.StoredHeight;
+  EssenceDescriptor.AspectRatio = PDesc.AspectRatio;
 
-  EssenceDescriptor->ContainerDuration = PDesc.ContainerDuration;
-  EssenceDescriptor->SampleRate = PDesc.EditRate;
-  EssenceDescriptor->FrameLayout = 0;
-  EssenceDescriptor->StoredWidth = PDesc.StoredWidth;
-  EssenceDescriptor->StoredHeight = PDesc.StoredHeight;
-  EssenceDescriptor->AspectRatio = PDesc.AspectRatio;
-
-  if ( PDesc.StoredWidth < 2049 )
-    {
-      EssenceDescriptor->PictureEssenceCoding.Set(dict.ul(MDD_JP2KEssenceCompression_2K));
-      EssenceSubDescriptor->Rsize = 3;
-    }
-  else
-    {
-      EssenceDescriptor->PictureEssenceCoding.Set(dict.ul(MDD_JP2KEssenceCompression_4K));
-      EssenceSubDescriptor->Rsize = 4;
-    }
-
-  EssenceSubDescriptor->Xsize = PDesc.Xsize;
-  EssenceSubDescriptor->Ysize = PDesc.Ysize;
-  EssenceSubDescriptor->XOsize = PDesc.XOsize;
-  EssenceSubDescriptor->YOsize = PDesc.YOsize;
-  EssenceSubDescriptor->XTsize = PDesc.XTsize;
-  EssenceSubDescriptor->YTsize = PDesc.YTsize;
-  EssenceSubDescriptor->XTOsize = PDesc.XTOsize;
-  EssenceSubDescriptor->YTOsize = PDesc.YTOsize;
-  EssenceSubDescriptor->Csize = PDesc.Csize;
+  EssenceSubDescriptor.Rsize = PDesc.Rsize;
+  EssenceSubDescriptor.Xsize = PDesc.Xsize;
+  EssenceSubDescriptor.Ysize = PDesc.Ysize;
+  EssenceSubDescriptor.XOsize = PDesc.XOsize;
+  EssenceSubDescriptor.YOsize = PDesc.YOsize;
+  EssenceSubDescriptor.XTsize = PDesc.XTsize;
+  EssenceSubDescriptor.YTsize = PDesc.YTsize;
+  EssenceSubDescriptor.XTOsize = PDesc.XTOsize;
+  EssenceSubDescriptor.YTOsize = PDesc.YTOsize;
+  EssenceSubDescriptor.Csize = PDesc.Csize;
 
   const ui32_t tmp_buffer_len = 1024;
   byte_t tmp_buffer[tmp_buffer_len];
@@ -249,21 +236,24 @@ ASDCP::JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
   *(ui32_t*)(tmp_buffer+4) = KM_i32_BE(sizeof(ASDCP::JP2K::ImageComponent_t));
   memcpy(tmp_buffer + 8, &PDesc.ImageComponents, sizeof(ASDCP::JP2K::ImageComponent_t) * MaxComponents);
 
-  const ui32_t pcomp_size = (sizeof(int) * 2) + (sizeof(ASDCP::JP2K::ImageComponent_t) * MaxComponents);
-  memcpy(EssenceSubDescriptor->PictureComponentSizing.get().Data(), tmp_buffer, pcomp_size);
-  EssenceSubDescriptor->PictureComponentSizing.get().Length(pcomp_size);
+  const ui32_t pcomp_size = (sizeof(ui32_t) * 2) + (sizeof(ASDCP::JP2K::ImageComponent_t) * MaxComponents);
+  memcpy(EssenceSubDescriptor.PictureComponentSizing.get().Data(), tmp_buffer, pcomp_size);
+  EssenceSubDescriptor.PictureComponentSizing.get().Length(pcomp_size);
+  EssenceSubDescriptor.PictureComponentSizing.set_has_value();
 
-  ui32_t precinct_set_size = 0, i;
-  for ( i = 0; PDesc.CodingStyleDefault.SPcod.PrecinctSize[i] != 0 && i < MaxPrecincts; i++ )
+  ui32_t precinct_set_size = 0;
+  for ( ui32_t i = 0; PDesc.CodingStyleDefault.SPcod.PrecinctSize[i] != 0 && i < MaxPrecincts; ++i )
     precinct_set_size++;
 
   ui32_t csd_size = sizeof(CodingStyleDefault_t) - MaxPrecincts + precinct_set_size;
-  memcpy(EssenceSubDescriptor->CodingStyleDefault.get().Data(), &PDesc.CodingStyleDefault, csd_size);
-  EssenceSubDescriptor->CodingStyleDefault.get().Length(csd_size);
+  memcpy(EssenceSubDescriptor.CodingStyleDefault.get().Data(), &PDesc.CodingStyleDefault, csd_size);
+  EssenceSubDescriptor.CodingStyleDefault.get().Length(csd_size);
+  EssenceSubDescriptor.CodingStyleDefault.set_has_value();
 
   ui32_t qdflt_size = PDesc.QuantizationDefault.SPqcdLength + 1;
-  memcpy(EssenceSubDescriptor->QuantizationDefault.get().Data(), &PDesc.QuantizationDefault, qdflt_size);
-  EssenceSubDescriptor->QuantizationDefault.get().Length(qdflt_size);
+  memcpy(EssenceSubDescriptor.QuantizationDefault.get().Data(), &PDesc.QuantizationDefault, qdflt_size);
+  EssenceSubDescriptor.QuantizationDefault.get().Length(qdflt_size);
+  EssenceSubDescriptor.QuantizationDefault.set_has_value();
 
   return RESULT_OK;
 }
@@ -271,7 +261,7 @@ ASDCP::JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
 
 //
 ASDCP::Result_t
-ASDCP::MD_to_JP2K_PDesc(const ASDCP::MXF::RGBAEssenceDescriptor&  EssenceDescriptor,
+ASDCP::MD_to_JP2K_PDesc(const ASDCP::MXF::GenericPictureEssenceDescriptor&  EssenceDescriptor,
 			const ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor,
 			const ASDCP::Rational& EditRate, const ASDCP::Rational& SampleRate,
 			ASDCP::JP2K::PictureDescriptor& PDesc)
@@ -324,143 +314,6 @@ ASDCP::MD_to_JP2K_PDesc(const ASDCP::MXF::RGBAEssenceDescriptor&  EssenceDescrip
   PDesc.QuantizationDefault.SPqcdLength = EssenceSubDescriptor.QuantizationDefault.const_get().Length() - 1;
   return RESULT_OK;
 }
-
-//
-ASDCP::Result_t
-ASDCP::JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
-			const ASDCP::Dictionary& dict,
-			ASDCP::MXF::CDCIEssenceDescriptor *EssenceDescriptor,
-			ASDCP::MXF::JPEG2000PictureSubDescriptor *EssenceSubDescriptor)
-{
-  if ( EssenceDescriptor == 0 || EssenceSubDescriptor == 0 )
-    return RESULT_PTR;
-
-  EssenceDescriptor->ContainerDuration = PDesc.ContainerDuration;
-  EssenceDescriptor->SampleRate = PDesc.EditRate;
-  EssenceDescriptor->FrameLayout = 0;
-  EssenceDescriptor->StoredWidth = PDesc.StoredWidth;
-  EssenceDescriptor->StoredHeight = PDesc.StoredHeight;
-  EssenceDescriptor->AspectRatio = PDesc.AspectRatio;
-
-  if ( PDesc.StoredWidth < 2049 )
-    {
-      EssenceDescriptor->PictureEssenceCoding.Set(dict.ul(MDD_JP2KEssenceCompression_2K));
-      EssenceSubDescriptor->Rsize = 3;
-    }
-  else
-    {
-      EssenceDescriptor->PictureEssenceCoding.Set(dict.ul(MDD_JP2KEssenceCompression_4K));
-      EssenceSubDescriptor->Rsize = 4;
-    }
-
-  EssenceSubDescriptor->Xsize = PDesc.Xsize;
-  EssenceSubDescriptor->Ysize = PDesc.Ysize;
-  EssenceSubDescriptor->XOsize = PDesc.XOsize;
-  EssenceSubDescriptor->YOsize = PDesc.YOsize;
-  EssenceSubDescriptor->XTsize = PDesc.XTsize;
-  EssenceSubDescriptor->YTsize = PDesc.YTsize;
-  EssenceSubDescriptor->XTOsize = PDesc.XTOsize;
-  EssenceSubDescriptor->YTOsize = PDesc.YTOsize;
-  EssenceSubDescriptor->Csize = PDesc.Csize;
-
-  const ui32_t tmp_buffer_len = 1024;
-  byte_t tmp_buffer[tmp_buffer_len];
-
-  *(ui32_t*)tmp_buffer = KM_i32_BE(MaxComponents); // three components
-  *(ui32_t*)(tmp_buffer+4) = KM_i32_BE(sizeof(ASDCP::JP2K::ImageComponent_t));
-  memcpy(tmp_buffer + 8, &PDesc.ImageComponents, sizeof(ASDCP::JP2K::ImageComponent_t) * MaxComponents);
-
-  const ui32_t pcomp_size = (sizeof(int) * 2) + (sizeof(ASDCP::JP2K::ImageComponent_t) * MaxComponents);
-  memcpy(EssenceSubDescriptor->PictureComponentSizing.get().Data(), tmp_buffer, pcomp_size);
-  EssenceSubDescriptor->PictureComponentSizing.get().Length(pcomp_size);
-
-  ui32_t precinct_set_size = 0, i;
-  for ( i = 0; PDesc.CodingStyleDefault.SPcod.PrecinctSize[i] != 0 && i < MaxPrecincts; i++ )
-    precinct_set_size++;
-
-  ui32_t csd_size = sizeof(CodingStyleDefault_t) - MaxPrecincts + precinct_set_size;
-  memcpy(EssenceSubDescriptor->CodingStyleDefault.get().Data(), &PDesc.CodingStyleDefault, csd_size);
-  EssenceSubDescriptor->CodingStyleDefault.get().Length(csd_size);
-
-  ui32_t qdflt_size = PDesc.QuantizationDefault.SPqcdLength + 1;
-  memcpy(EssenceSubDescriptor->QuantizationDefault.get().Data(), &PDesc.QuantizationDefault, qdflt_size);
-  EssenceSubDescriptor->QuantizationDefault.get().Length(qdflt_size);
-
-  return RESULT_OK;
-}
-
-
-//
-ASDCP::Result_t
-ASDCP::MD_to_JP2K_PDesc(const ASDCP::MXF::CDCIEssenceDescriptor&  EssenceDescriptor,
-			const ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor,
-			const ASDCP::Rational& EditRate, const ASDCP::Rational& SampleRate,
-			ASDCP::JP2K::PictureDescriptor& PDesc)
-{
-  memset(&PDesc, 0, sizeof(PDesc));
-
-  PDesc.EditRate           = EditRate;
-  PDesc.SampleRate         = SampleRate;
-  assert(EssenceDescriptor.ContainerDuration.const_get() <= 0xFFFFFFFFL);
-  PDesc.ContainerDuration  = static_cast<ui32_t>(EssenceDescriptor.ContainerDuration.const_get());
-  PDesc.StoredWidth        = EssenceDescriptor.StoredWidth;
-  PDesc.StoredHeight       = EssenceDescriptor.StoredHeight;
-  PDesc.AspectRatio        = EssenceDescriptor.AspectRatio;
-
-  PDesc.Rsize   = EssenceSubDescriptor.Rsize;
-  PDesc.Xsize   = EssenceSubDescriptor.Xsize;
-  PDesc.Ysize   = EssenceSubDescriptor.Ysize;
-  PDesc.XOsize  = EssenceSubDescriptor.XOsize;
-  PDesc.YOsize  = EssenceSubDescriptor.YOsize;
-  PDesc.XTsize  = EssenceSubDescriptor.XTsize;
-  PDesc.YTsize  = EssenceSubDescriptor.YTsize;
-  PDesc.XTOsize = EssenceSubDescriptor.XTOsize;
-  PDesc.YTOsize = EssenceSubDescriptor.YTOsize;
-  PDesc.Csize   = EssenceSubDescriptor.Csize;
-
-  // PictureComponentSizing
-  ui32_t tmp_size = EssenceSubDescriptor.PictureComponentSizing.const_get().Length();
-
-  if ( tmp_size == 17 ) // ( 2 * sizeof(ui32_t) ) + 3 components * 3 byte each
-    {
-      memcpy(&PDesc.ImageComponents, EssenceSubDescriptor.PictureComponentSizing.const_get().RoData() + 8, tmp_size - 8);
-    }
-  else
-    {
-      DefaultLogSink().Error("Unexpected PictureComponentSizing size: %u, should be 17\n", tmp_size);
-    }
-
-  // CodingStyleDefault
-  memset(&PDesc.CodingStyleDefault, 0, sizeof(CodingStyleDefault_t));
-  memcpy(&PDesc.CodingStyleDefault,
-	 EssenceSubDescriptor.CodingStyleDefault.const_get().RoData(),
-	 EssenceSubDescriptor.CodingStyleDefault.const_get().Length());
-
-  // QuantizationDefault
-  memset(&PDesc.QuantizationDefault, 0, sizeof(QuantizationDefault_t));
-  memcpy(&PDesc.QuantizationDefault,
-	 EssenceSubDescriptor.QuantizationDefault.const_get().RoData(),
-	 EssenceSubDescriptor.QuantizationDefault.const_get().Length());
-  
-  PDesc.QuantizationDefault.SPqcdLength = EssenceSubDescriptor.QuantizationDefault.const_get().Length() - 1;
-  return RESULT_OK;
-}
-
-// Compares the actual floating point value of the rates.
-// This allows, for example, {300000,1001} and {2997,100) to be considered equivalent.
-// to 29.97.
-bool 
-epsilon_compare(const ASDCP::Rational& left, const ASDCP::Rational& right, double epsilon = 0.001)
-{
-  bool result = false;
-  double difference = left.Quotient() - right.Quotient();
-
-  if (fabs(difference) < epsilon)
-    result = true;
-
-  return result;
-}
-// end DOLBY
 
 
 //------------------------------------------------------------------------------------------
@@ -486,7 +339,7 @@ public:
 
   virtual ~lh__Reader() {}
 
-  Result_t    OpenRead(const char*, EssenceType_t);
+  Result_t    OpenRead(const std::string&, EssenceType_t);
   Result_t    ReadFrame(ui32_t, JP2K::FrameBuffer&, AESDecContext*, HMACContext*);
 };
 
@@ -494,7 +347,7 @@ public:
 //
 //
 ASDCP::Result_t
-lh__Reader::OpenRead(const char* filename, EssenceType_t type)
+lh__Reader::OpenRead(const std::string& filename, EssenceType_t type)
 {
   Result_t result = OpenMXFRead(filename);
 
@@ -729,7 +582,7 @@ ASDCP::JP2K::MXFReader::RIP()
 // Open the file for reading. The file must exist. Returns error if the
 // operation cannot be completed.
 ASDCP::Result_t
-ASDCP::JP2K::MXFReader::OpenRead(const char* filename) const
+ASDCP::JP2K::MXFReader::OpenRead(const std::string& filename) const
 {
   return m_Reader->OpenRead(filename, ASDCP::ESS_JPEG_2000);
 }
@@ -956,7 +809,7 @@ ASDCP::JP2K::MXFSReader::RIP()
 // Open the file for reading. The file must exist. Returns error if the
 // operation cannot be completed.
 ASDCP::Result_t
-ASDCP::JP2K::MXFSReader::OpenRead(const char* filename) const
+ASDCP::JP2K::MXFSReader::OpenRead(const std::string& filename) const
 {
   return m_Reader->OpenRead(filename, ASDCP::ESS_JPEG_2000_S);
 }
@@ -1076,7 +929,7 @@ public:
 
   virtual ~lh__Writer(){}
 
-  Result_t OpenWrite(const char*, EssenceType_t type, ui32_t HeaderSize);
+  Result_t OpenWrite(const std::string&, EssenceType_t type, ui32_t HeaderSize);
   Result_t SetSourceStream(const PictureDescriptor&, const std::string& label,
 			   ASDCP::Rational LocalEditRate = ASDCP::Rational(0,0));
   Result_t WriteFrame(const JP2K::FrameBuffer&, bool add_index, AESEncContext*, HMACContext*);
@@ -1086,7 +939,7 @@ public:
 // Open the file for writing. The file must not exist. Returns error if
 // the operation cannot be completed.
 ASDCP::Result_t
-lh__Writer::OpenWrite(const char* filename, EssenceType_t type, ui32_t HeaderSize)
+lh__Writer::OpenWrite(const std::string& filename, EssenceType_t type, ui32_t HeaderSize)
 {
   if ( ! m_State.Test_BEGIN() )
     return RESULT_STATE;
@@ -1134,12 +987,25 @@ lh__Writer::SetSourceStream(const PictureDescriptor& PDesc, const std::string& l
 
   m_PDesc = PDesc;
   assert(m_Dict);
+  assert(m_EssenceDescriptor);
+  assert(m_EssenceSubDescriptor);
   Result_t result = JP2K_PDesc_to_MD(m_PDesc, *m_Dict,
-				     (ASDCP::MXF::RGBAEssenceDescriptor*)m_EssenceDescriptor,
-				     m_EssenceSubDescriptor);
+				     *static_cast<ASDCP::MXF::GenericPictureEssenceDescriptor*>(m_EssenceDescriptor),
+				     *m_EssenceSubDescriptor);
 
   if ( ASDCP_SUCCESS(result) )
     {
+      if ( PDesc.StoredWidth < 2049 )
+	{
+	  static_cast<ASDCP::MXF::RGBAEssenceDescriptor*>(m_EssenceDescriptor)->PictureEssenceCoding.Set(m_Dict->ul(MDD_JP2KEssenceCompression_2K));
+	  m_EssenceSubDescriptor->Rsize = 3;
+	}
+      else
+	{
+	  static_cast<ASDCP::MXF::RGBAEssenceDescriptor*>(m_EssenceDescriptor)->PictureEssenceCoding.Set(m_Dict->ul(MDD_JP2KEssenceCompression_4K));
+	  m_EssenceSubDescriptor->Rsize = 4;
+	}
+
       memcpy(m_EssenceUL, m_Dict->ul(MDD_JPEG2000Essence), SMPTE_UL_LENGTH);
       m_EssenceUL[SMPTE_UL_LENGTH-1] = 1; // first (and only) essence container
       result = m_State.Goto_READY();
@@ -1147,7 +1013,7 @@ lh__Writer::SetSourceStream(const PictureDescriptor& PDesc, const std::string& l
 
   if ( ASDCP_SUCCESS(result) )
     {
-      result = WriteASDCPHeader(label, UL(m_Dict->ul(MDD_JPEG_2000Wrapping)),
+      result = WriteASDCPHeader(label, UL(m_Dict->ul(MDD_JPEG_2000WrappingFrame)),
 				PICT_DEF_LABEL, UL(m_EssenceUL), UL(m_Dict->ul(MDD_PictureDataDef)),
 				LocalEditRate, derive_timecode_rate_from_edit_rate(m_PDesc.EditRate));
     }
@@ -1271,7 +1137,7 @@ ASDCP::JP2K::MXFWriter::RIP()
 // Open the file for writing. The file must not exist. Returns error if
 // the operation cannot be completed.
 ASDCP::Result_t
-ASDCP::JP2K::MXFWriter::OpenWrite(const char* filename, const WriterInfo& Info,
+ASDCP::JP2K::MXFWriter::OpenWrite(const std::string& filename, const WriterInfo& Info,
 				  const PictureDescriptor& PDesc, ui32_t HeaderSize)
 {
   if ( Info.LabelSetType == LS_MXF_SMPTE )
@@ -1417,7 +1283,7 @@ ASDCP::JP2K::MXFSWriter::RIP()
 // Open the file for writing. The file must not exist. Returns error if
 // the operation cannot be completed.
 ASDCP::Result_t
-ASDCP::JP2K::MXFSWriter::OpenWrite(const char* filename, const WriterInfo& Info,
+ASDCP::JP2K::MXFSWriter::OpenWrite(const std::string& filename, const WriterInfo& Info,
 				   const PictureDescriptor& PDesc, ui32_t HeaderSize)
 {
   if ( Info.LabelSetType == LS_MXF_SMPTE )

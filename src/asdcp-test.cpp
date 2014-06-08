@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-test.cpp
-    \version $Id: asdcp-test.cpp,v 1.49 2013/07/02 15:35:41 jhurst Exp $       
+    \version $Id: asdcp-test.cpp,v 1.50 2014/01/02 23:29:22 jhurst Exp $       
     \brief   AS-DCP file manipulation utility
 
   This program provides command line access to the major features of the asdcplib
@@ -240,6 +240,9 @@ decode_channel_fmt(const std::string& label_name)
 
   else if ( label_name == "7.1DS" )
     return PCM::CF_CFG_5;
+
+  else if ( label_name == "MCA" )
+    return PCM::CF_CFG_6;
 
   fprintf(stderr, "Error decoding channel format string: %s\n", label_name.c_str());
   fprintf(stderr, "Expecting '5.1', '6.1', '7.1', '7.1DS' or 'WTF'\n");

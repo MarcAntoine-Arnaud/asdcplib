@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_internal.h
-    \version $Id: AS_DCP_internal.h,v 1.40 2013/07/02 05:51:18 jhurst Exp $
+    \version $Id: AS_DCP_internal.h,v 1.42 2014/01/02 23:29:22 jhurst Exp $
     \brief   AS-DCP library, non-public common elements
 */
 
@@ -134,25 +134,15 @@ namespace ASDCP
   Result_t EncryptFrameBuffer(const ASDCP::FrameBuffer&, ASDCP::FrameBuffer&, AESEncContext*);
   Result_t DecryptFrameBuffer(const ASDCP::FrameBuffer&, ASDCP::FrameBuffer&, AESDecContext*);
 
-  Result_t MD_to_JP2K_PDesc(const ASDCP::MXF::RGBAEssenceDescriptor&  EssenceDescriptor,
+  Result_t MD_to_JP2K_PDesc(const ASDCP::MXF::GenericPictureEssenceDescriptor&  EssenceDescriptor,
 			    const ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor,
 			    const ASDCP::Rational& EditRate, const ASDCP::Rational& SampleRate,
 			    ASDCP::JP2K::PictureDescriptor& PDesc);
 
   Result_t JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
 			    const ASDCP::Dictionary& dict,
-			    ASDCP::MXF::RGBAEssenceDescriptor *EssenceDescriptor,
-			    ASDCP::MXF::JPEG2000PictureSubDescriptor *EssenceSubDescriptor);
-
-  Result_t MD_to_JP2K_PDesc(const ASDCP::MXF::CDCIEssenceDescriptor&  EssenceDescriptor,
-			    const ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor,
-			    const ASDCP::Rational& EditRate, const ASDCP::Rational& SampleRate,
-			    ASDCP::JP2K::PictureDescriptor& PDesc);
-
-  Result_t JP2K_PDesc_to_MD(const JP2K::PictureDescriptor& PDesc,
-			    const ASDCP::Dictionary& dict,
-			    ASDCP::MXF::CDCIEssenceDescriptor *EssenceDescriptor,
-			    ASDCP::MXF::JPEG2000PictureSubDescriptor *EssenceSubDescriptor);
+			    ASDCP::MXF::GenericPictureEssenceDescriptor& EssenceDescriptor,
+			    ASDCP::MXF::JPEG2000PictureSubDescriptor& EssenceSubDescriptor);
 
   Result_t PCM_ADesc_to_MD(PCM::AudioDescriptor& ADesc, ASDCP::MXF::WaveAudioDescriptor* ADescObj);
   Result_t MD_to_PCM_ADesc(ASDCP::MXF::WaveAudioDescriptor* ADescObj, PCM::AudioDescriptor& ADesc);
@@ -223,7 +213,7 @@ namespace ASDCP
 	const MXF::RIP& GetRIP() const { return m_RIP; }
 
 	//
-	Result_t OpenMXFRead(const char* filename)
+	Result_t OpenMXFRead(const std::string& filename)
 	{
 	  m_LastPosition = 0;
 	  Result_t result = m_File.OpenRead(filename);
@@ -813,7 +803,7 @@ namespace ASDCP
       h__ASDCPReader(const Dictionary&);
       virtual ~h__ASDCPReader();
 
-      Result_t OpenMXFRead(const char* filename);
+      Result_t OpenMXFRead(const std::string& filename);
       Result_t ReadEKLVFrame(ui32_t FrameNum, ASDCP::FrameBuffer& FrameBuf,
 			     const byte_t* EssenceUL, AESDecContext* Ctx, HMACContext* HMAC);
       Result_t LocateFrame(ui32_t FrameNum, Kumu::fpos_t& streamOffset,

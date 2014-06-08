@@ -1,6 +1,6 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 #
-# $Id: Makefile.am,v 1.70 2013/07/02 20:52:54 mikey Exp $
+# $Id: Makefile.am,v 1.74 2014/01/03 00:55:45 jhurst Exp $
 #
 # Copyright (c) 2007-2013 John Hurst. All rights reserved.
 #
@@ -59,6 +59,7 @@ include_HEADERS += \
 	MDD.h \
 	Metadata.h \
 	KLV.h \
+	JP2K.h \
 	MXFTypes.h \
 	MXF.h \
 	Wav.h \
@@ -157,6 +158,10 @@ nodist_libpyasdcp_la_SOURCES = \
 libpyasdcp_la_CPPFLAGS = @PYTHON_CPPFLAGS@
 libpyasdcp_la_LDFLAGS = @PYTHON_LSPEC@  -release @VERSION@
 libpyasdcp_la_LIBADD = libkumu.la libasdcp.la
+
+if USE_AS_02
+libpyasdcp_la_LIBADD	+= libas02.la
+endif
 
 pyexecdir = @PYTHON_EXECDIR@
 pyexec_includedir = $(PYTHON_PREFIX)/include/python$(PYTHON_SHORTVERSION)

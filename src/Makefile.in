@@ -15,7 +15,7 @@
 @SET_MAKE@
 
 #
-# $Id: Makefile.am,v 1.70 2013/07/02 20:52:54 mikey Exp $
+# $Id: Makefile.am,v 1.74 2014/01/03 00:55:45 jhurst Exp $
 #
 # Copyright (c) 2007-2013 John Hurst. All rights reserved.
 #
@@ -87,6 +87,7 @@ host_triplet = @host@
 @DEV_HEADERS_TRUE@	MDD.h \
 @DEV_HEADERS_TRUE@	Metadata.h \
 @DEV_HEADERS_TRUE@	KLV.h \
+@DEV_HEADERS_TRUE@	JP2K.h \
 @DEV_HEADERS_TRUE@	MXFTypes.h \
 @DEV_HEADERS_TRUE@	MXF.h \
 @DEV_HEADERS_TRUE@	Wav.h \
@@ -99,21 +100,22 @@ host_triplet = @host@
 
 # Python extension
 @PYTHON_USE_TRUE@am__append_8 = libpyasdcp.la
+@PYTHON_USE_TRUE@@USE_AS_02_TRUE@am__append_9 = libas02.la
 bin_PROGRAMS = asdcp-wrap$(EXEEXT) asdcp-unwrap$(EXEEXT) \
 	asdcp-util$(EXEEXT) asdcp-info$(EXEEXT) asdcp-test$(EXEEXT) \
 	j2c-test$(EXEEXT) blackwave$(EXEEXT) klvwalk$(EXEEXT) \
 	wavesplit$(EXEEXT) klvsplit$(EXEEXT) kmfilegen$(EXEEXT) \
 	kmrandgen$(EXEEXT) kmuuidgen$(EXEEXT) $(am__EXEEXT_1)
-@USE_AS_02_TRUE@am__append_9 = \
+@USE_AS_02_TRUE@am__append_10 = \
 @USE_AS_02_TRUE@	as-02-wrap \
 @USE_AS_02_TRUE@	as-02-unwrap
 
 check_PROGRAMS = asdcp-mem-test$(EXEEXT) path-test$(EXEEXT) \
 	fips-186-rng-test$(EXEEXT) asdcp-version$(EXEEXT) \
 	$(am__EXEEXT_2)
-@DEV_HEADERS_TRUE@am__append_10 = tt-xform
-@DEV_HEADERS_TRUE@@FREEDIST_FALSE@am__append_11 = $(nodist_libasdcp_la_SOURCES) $(nodist_tt_xform_SOURCES)
-@FREEDIST_FALSE@@PYTHON_USE_TRUE@am__append_12 = $(nodist_pyexec_include_HEADERS) $(nodist_libpyasdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) $(nodist_asdcp_la_SOURCES)
+@DEV_HEADERS_TRUE@am__append_11 = tt-xform
+@DEV_HEADERS_TRUE@@FREEDIST_FALSE@am__append_12 = $(nodist_libasdcp_la_SOURCES) $(nodist_tt_xform_SOURCES)
+@FREEDIST_FALSE@@PYTHON_USE_TRUE@am__append_13 = $(nodist_pyexec_include_HEADERS) $(nodist_libpyasdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) $(nodist_asdcp_la_SOURCES)
 subdir = src
 DIST_COMMON = $(am__include_HEADERS_DIST) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/build-aux/depcomp
@@ -222,7 +224,8 @@ libkumu_la_OBJECTS = $(am_libkumu_la_OBJECTS)
 libkumu_la_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libkumu_la_LDFLAGS) $(LDFLAGS) -o $@
-@PYTHON_USE_TRUE@libpyasdcp_la_DEPENDENCIES = libkumu.la libasdcp.la
+@PYTHON_USE_TRUE@libpyasdcp_la_DEPENDENCIES = libkumu.la libasdcp.la \
+@PYTHON_USE_TRUE@	$(am__append_9)
 @PYTHON_USE_TRUE@nodist_libpyasdcp_la_OBJECTS =  \
 @PYTHON_USE_TRUE@	libpyasdcp_la-kumu_python.lo \
 @PYTHON_USE_TRUE@	libpyasdcp_la-asdcp_python.lo \
@@ -354,9 +357,9 @@ am__can_run_installinfo = \
   esac
 am__include_HEADERS_DIST = KM_error.h KM_fileio.h KM_log.h KM_memio.h \
 	KM_mutex.h KM_platform.h KM_prng.h KM_util.h KM_tai.h KM_xml.h \
-	AS_DCP.h S12MTimecode.h MDD.h Metadata.h KLV.h MXFTypes.h \
-	MXF.h Wav.h PCMParserList.h AtmosSyncChannel_Generator.h \
-	AS_02.h
+	AS_DCP.h S12MTimecode.h MDD.h Metadata.h KLV.h JP2K.h \
+	MXFTypes.h MXF.h Wav.h PCMParserList.h \
+	AtmosSyncChannel_Generator.h AS_02.h
 HEADERS = $(include_HEADERS) $(nodist_include_HEADERS) \
 	$(nodist_pyexec_include_HEADERS)
 ETAGS = etags
@@ -583,7 +586,8 @@ libasdcp_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
 
 @PYTHON_USE_TRUE@libpyasdcp_la_CPPFLAGS = @PYTHON_CPPFLAGS@
 @PYTHON_USE_TRUE@libpyasdcp_la_LDFLAGS = @PYTHON_LSPEC@  -release @VERSION@
-@PYTHON_USE_TRUE@libpyasdcp_la_LIBADD = libkumu.la libasdcp.la
+@PYTHON_USE_TRUE@libpyasdcp_la_LIBADD = libkumu.la libasdcp.la \
+@PYTHON_USE_TRUE@	$(am__append_9)
 @PYTHON_USE_TRUE@pyexecdir = @PYTHON_EXECDIR@
 @PYTHON_USE_TRUE@pyexec_includedir = $(PYTHON_PREFIX)/include/python$(PYTHON_SHORTVERSION)
 @PYTHON_USE_TRUE@nodist_pyexec_include_HEADERS = kumu_python.h asdcp_python.h asdcp_wrappers.h
@@ -655,8 +659,8 @@ TESTS_ENVIRONMENT = BUILD_DIR="." TEST_FILES=../tests TEST_FILE_PREFIX=DCPd1-M1 
 
 
 # files to include in the distribution that automake doesn't automatically include
-EXTRA_DIST = fips-186-test-harness.pl $(TESTS) $(am__append_11) \
-	$(am__append_12)
+EXTRA_DIST = fips-186-test-harness.pl $(TESTS) $(am__append_12) \
+	$(am__append_13)
 
 # source files that are themselves built
 BUILT_SOURCES = Metadata.h Metadata.cpp MDD.h MDD.cpp

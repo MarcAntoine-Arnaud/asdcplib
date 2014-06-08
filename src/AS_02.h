@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.12 2013/06/17 17:55:54 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.15 2014/01/02 23:29:21 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -97,7 +97,6 @@ namespace AS_02
       Result_t Lookup(ui32_t frame_num, ASDCP::MXF::IndexTableSegment::IndexEntry&) const;
     };
 
-
     
     // Returns size in bytes of a single sample of data described by ADesc
     inline ui32_t CalcSampleSize(const ASDCP::MXF::WaveAudioDescriptor& d)
@@ -118,6 +117,15 @@ namespace AS_02
       return CalcSampleSize(d) * CalcSamplesPerFrame(d, edit_rate);
     }
 
+    // Returns number of frames for data described by ADesc, given a duration in samples and an edit rate
+    inline ui32_t CalcFramesFromDurationInSamples(const ui32_t durationInSamples, const ASDCP::MXF::WaveAudioDescriptor& d,
+						  const ASDCP::Rational& edit_rate)
+    {
+      return static_cast<ui32_t>(static_cast<ui64_t>(durationInSamples) *
+				 static_cast<ui64_t>(d.AudioSamplingRate.Denominator * edit_rate.Numerator) /
+				 static_cast<ui64_t>(d.AudioSamplingRate.Numerator * edit_rate.Denominator));
+    }
+
   } // namespace MXF
 
   //---------------------------------------------------------------------------------
@@ -134,7 +142,7 @@ namespace AS_02
   };
  
   namespace JP2K
-  {
+  { 
     //
     class MXFWriter
     {
@@ -159,7 +167,7 @@ namespace AS_02
 			 ASDCP::MXF::InterchangeObject_list_t& essence_sub_descriptor_list,
 			 const ASDCP::Rational& edit_rate, const ui32_t& header_size = 16384,
 			 const IndexStrategy_t& strategy = IS_FOLLOW, const ui32_t& partition_space = 10);
-      
+
       // Writes a frame of essence to the MXF file. If the optional AESEncContext
       // argument is present, the essence is encrypted prior to writing.
       // Fails if the file is not open, is finalized, or an operating system
@@ -230,7 +238,7 @@ namespace AS_02
     // the reader to signal the number of samples to be read by each call to ReadFrame();
 
     //
-    class MXFWriter
+      class MXFWriter
     {
       class h__Writer;
       ASDCP::mem_ptr<h__Writer> m_Writer;
@@ -306,6 +314,152 @@ namespace AS_02
     };
   } // namespace PCM
 
+  //---------------------------------------------------------------------------------
+  //
+  namespace TimedText
+    {
+      using ASDCP::TimedText::TimedTextDescriptor;
+      using ASDCP::TimedText::TimedTextResourceDescriptor;
+      using ASDCP::TimedText::ResourceList_t;
+
+      //
+      class ST2052_TextParser
+	{
+	  class h__TextParser;
+	  ASDCP::mem_ptr<h__TextParser> m_Parser;
+	  ASDCP_NO_COPY_CONSTRUCT(ST2052_TextParser);
+
+	public:
+	  ST2052_TextParser();
+	  virtual ~ST2052_TextParser();
+
+	  // Opens an XML file for reading, parses data to provide a complete
+	  // set of stream metadata for the MXFWriter below.
+	  Result_t OpenRead(const std::string& filename) const;
+
+	  // Parse an XML string 
+	  Result_t OpenRead(const std::string& xml_doc, const std::string& filename) const;
+
+	  // Fill a TimedTextDescriptor struct with the values from the file's contents.
+	  // Returns RESULT_INIT if the file is not open.
+	  Result_t FillTimedTextDescriptor(ASDCP::TimedText::TimedTextDescriptor&) const;
+
+	  // Reads the complete Timed Text Resource into the given string.
+	  Result_t ReadTimedTextResource(std::string&) const;
+
+	  // Reads the Ancillary Resource having the given ID. Fails if the buffer
+	  // is too small or the resource does not exist. The optional Resolver
+	  // argument can be provided which will be used to retrieve the resource
+	  // having a particulat UUID. If a Resolver is not supplied, the default
+	  // internal resolver will return the contents of the file having the UUID
+	  // as the filename. The filename must exist in the same directory as the
+	  // XML file opened with OpenRead().
+	  Result_t ReadAncillaryResource(const Kumu::UUID&, ASDCP::TimedText::FrameBuffer&,
+					 const ASDCP::TimedText::IResourceResolver* Resolver = 0) const;
+	};
+
+      //
+      class MXFWriter
+	{
+	  class h__Writer;
+	  ASDCP::mem_ptr<h__Writer> m_Writer;
+	  ASDCP_NO_COPY_CONSTRUCT(MXFWriter);
+
+	public:
+	  MXFWriter();
+	  virtual ~MXFWriter();
+
+	  // Warning: direct manipulation of MXF structures can interfere
+	  // with the normal operation of the wrapper.  Caveat emptor!
+	  virtual ASDCP::MXF::OP1aHeader& OP1aHeader();
+	  virtual ASDCP::MXF::RIP& RIP();
+
+	  // Open the file for writing. The file must not exist. Returns error if
+	  // the operation cannot be completed or if nonsensical data is discovered
+	  // in the essence descriptor.
+	  Result_t OpenWrite(const std::string& filename, const ASDCP::WriterInfo&,
+			     const ASDCP::TimedText::TimedTextDescriptor&, ui32_t HeaderSize = 16384);
+
+	  // Writes the Timed-Text Resource to the MXF file. The file must be UTF-8
+	  // encoded. If the optional AESEncContext argument is present, the essence
+	  // is encrypted prior to writing. Fails if the file is not open, is finalized,
+	  // or an operating system error occurs.
+	  // This method may only be called once, and it must be called before any
+	  // call to WriteAncillaryResource(). RESULT_STATE will be returned if these
+	  // conditions are not met.
+	  Result_t WriteTimedTextResource(const std::string& XMLDoc, ASDCP::AESEncContext* = 0, ASDCP::HMACContext* = 0);
+
+	  // Writes an Ancillary Resource to the MXF file. If the optional AESEncContext
+	  // argument is present, the essence is encrypted prior to writing.
+	  // Fails if the file is not open, is finalized, or an operating system
+	  // error occurs. RESULT_STATE will be returned if the method is called before
+	  // WriteTimedTextResource()
+	  Result_t WriteAncillaryResource(const ASDCP::TimedText::FrameBuffer&, ASDCP::AESEncContext* = 0, ASDCP::HMACContext* = 0);
+
+	  // Closes the MXF file, writing the index and revised header.
+	  Result_t Finalize();
+	};
+
+      //
+      class MXFReader
+	{
+	  class h__Reader;
+	  ASDCP::mem_ptr<h__Reader> m_Reader;
+	  ASDCP_NO_COPY_CONSTRUCT(MXFReader);
+
+	public:
+	  MXFReader();
+	  virtual ~MXFReader();
+
+	  // Warning: direct manipulation of MXF structures can interfere
+	  // with the normal operation of the wrapper.  Caveat emptor!
+	  virtual ASDCP::MXF::OP1aHeader& OP1aHeader();
+	  virtual AS_02::MXF::AS02IndexReader& AS02IndexReader();
+	  virtual ASDCP::MXF::RIP& RIP();
+
+	  // Open the file for reading. The file must exist. Returns error if the
+	  // operation cannot be completed.
+	  Result_t OpenRead(const std::string& filename) const;
+
+	  // Returns RESULT_INIT if the file is not open.
+	  Result_t Close() const;
+
+	  // Fill a TimedTextDescriptor struct with the values from the file's header.
+	  // Returns RESULT_INIT if the file is not open.
+	  Result_t FillTimedTextDescriptor(ASDCP::TimedText::TimedTextDescriptor&) const;
+
+	  // Fill a WriterInfo struct with the values from the file's header.
+	  // Returns RESULT_INIT if the file is not open.
+	  Result_t FillWriterInfo(ASDCP::WriterInfo&) const;
+
+	  // Reads the complete Timed Text Resource into the given string. Fails if the resource
+	  // is encrypted and AESDecContext is NULL (use the following method to retrieve the
+	  // raw ciphertet block).
+	  Result_t ReadTimedTextResource(std::string&, ASDCP::AESDecContext* = 0, ASDCP::HMACContext* = 0) const;
+
+	  // Reads the complete Timed Text Resource from the MXF file. If the optional AESEncContext
+	  // argument is present, the resource is decrypted after reading. If the MXF
+	  // file is encrypted and the AESDecContext argument is NULL, the frame buffer
+	  // will contain the ciphertext frame data. If the HMACContext argument is
+	  // not NULL, the HMAC will be calculated (if the file supports it).
+	  // Returns RESULT_INIT if the file is not open, failure if the frame number is
+	  // out of range, or if optional decrypt or HAMC operations fail.
+	  Result_t ReadTimedTextResource(ASDCP::TimedText::FrameBuffer&, ASDCP::AESDecContext* = 0, ASDCP::HMACContext* = 0) const;
+
+	  // Reads the timed-text resource having the given UUID from the MXF file. If the
+	  // optional AESEncContext argument is present, the resource is decrypted after
+	  // reading. If the MXF file is encrypted and the AESDecContext argument is NULL,
+	  // the frame buffer will contain the ciphertext frame data. If the HMACContext
+	  // argument is not NULL, the HMAC will be calculated (if the file supports it).
+	  // Returns RESULT_INIT if the file is not open, failure if the frame number is
+	  // out of range, or if optional decrypt or HAMC operations fail.
+	  Result_t ReadAncillaryResource(const Kumu::UUID&, ASDCP::TimedText::FrameBuffer&, ASDCP::AESDecContext* = 0, ASDCP::HMACContext* = 0) const;
+
+	  // Print debugging information to stream
+	  void     DumpHeaderMetadata(FILE* = 0) const;
+	  void     DumpIndex(FILE* = 0) const;
+	};
+    } // namespace TimedText
 
 
 } // namespace AS_02

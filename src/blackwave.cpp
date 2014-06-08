@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    wavsplit.cpp
-    \version $Id: blackwave.cpp,v 1.12 2013/04/12 23:39:31 mikey Exp $
+    \version $Id: blackwave.cpp,v 1.13 2013/08/06 15:31:26 mikey Exp $
     \brief   Black WAV file generator
 */
 
@@ -100,7 +100,7 @@ public:
   const char* filename;  // filename prefix for files written by the extract mode
 
   CommandOptions(int argc, const char** argv) :
-    error_flag(true), verbose_flag(false), version_flag(false), help_flag(false),
+    error_flag(true), verbose_flag(false), version_flag(false), help_flag(false), s96_flag(false),
     duration(1440), filename(0)
   {
     for ( int i = 1; i < argc; i++ )

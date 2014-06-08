@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    j2c-test.cpp
-    \version $Id: j2c-test.cpp,v 1.6 2010/06/17 20:11:42 jhurst Exp $
+    \version $Id: j2c-test.cpp,v 1.7 2013/11/20 00:09:47 jhurst Exp $
     \brief   JP2K parser test
 */
 
@@ -189,25 +189,24 @@ main(int argc, const char** argv)
 		    hexdump(MyMarker.m_Data - 2, MyMarker.m_DataSize + 2, stdout);
 		}
 
-	      switch ( MyMarker.m_Type )
+	      if ( MyMarker.m_Type == MRK_SOD )
 		{
-		case MRK_SOD:
 		  p = end_p;
-		  break;
-
-		case MRK_SIZ:
-		  {
-		    Accessor::SIZ SIZ_(MyMarker);
-		    SIZ_.Dump(stdout);
-		  }
-		  break;
-
-		case MRK_COM:
-		  {
-		    Accessor::COM COM_(MyMarker);
-		    COM_.Dump(stdout);
-		  }
-		  break;
+		}
+	      else if ( MyMarker.m_Type == MRK_SIZ )
+		{
+		  Accessor::SIZ SIZ_(MyMarker);
+		  SIZ_.Dump(stdout);
+		}
+	      else if ( MyMarker.m_Type == MRK_COD )
+		{
+		  Accessor::COD COD_(MyMarker);
+		  COD_.Dump(stdout);
+		}
+	      else if ( MyMarker.m_Type == MRK_COM )
+		{
+		  Accessor::COM COM_(MyMarker);
+		  COM_.Dump(stdout);
 		}
 	    }
 	}

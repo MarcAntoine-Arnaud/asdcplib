@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    h__Reader.cpp
-    \version $Id: h__Reader.cpp,v 1.36 2013/06/11 01:31:50 jhurst Exp $
+    \version $Id: h__Reader.cpp,v 1.37 2014/01/02 23:29:22 jhurst Exp $
     \brief   MXF file reader base class
 */
 
@@ -70,7 +70,7 @@ ASDCP::h__ASDCPReader::~h__ASDCPReader() {}
 
 // AS-DCP method of opening an MXF file for read
 Result_t
-ASDCP::h__ASDCPReader::OpenMXFRead(const char* filename)
+ASDCP::h__ASDCPReader::OpenMXFRead(const std::string& filename)
 {
   Result_t result = ASDCP::MXF::TrackFileReader<OP1aHeader, OPAtomIndexFooter>::OpenMXFRead(filename);
 

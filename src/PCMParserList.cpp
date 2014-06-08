@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2012, John Hurst
+Copyright (c) 2004-2013, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    PCMParserList.cpp
-    \version $Id: PCMParserList.cpp,v 1.9 2012/02/21 02:09:31 jhurst Exp $
+    \version $Id: PCMParserList.cpp,v 1.10 2014/01/02 23:29:22 jhurst Exp $
     \brief   Read WAV file(s), multiplex multiple PCM frame buffers into one
 */
 
@@ -48,10 +48,8 @@ ASDCP::ParserInstance::~ParserInstance()
 
 // PCM::CalcSampleSize(ADesc);
 Result_t
-ASDCP::ParserInstance::OpenRead(const char* filename, const Rational& PictureRate)
+ASDCP::ParserInstance::OpenRead(const std::string& filename, const Rational& PictureRate)
 {
-  ASDCP_TEST_NULL_STR(filename);
-
   Result_t result = Parser.OpenRead(filename, PictureRate);
 
   if ( ASDCP_SUCCESS(result) )
