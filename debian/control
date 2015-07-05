@@ -1,0 +1,14 @@
+Source: asdcplib
+Maintainer: Marc-Antoine ARNAUD <marcantoine.arnaud@arkena.com>
+Section: video
+Priority: extra
+Build-Depends: debhelper (>= 8)
+XS-Python-Version: >= 2.6
+Standards-Version: 3.9.4
+
+Package: asdcplib
+Architecture: all
+Depends: ${misc:Depends}
+Description: AS-DCP File Access Library
+ asdcplib is an open source implementation of SMPTE and the MXF Interop “Sound & Picture Track File” format.
+ It was originally developed with support from DCI. Development is currently supported by CineCert and other d-cinema manufacturers.
