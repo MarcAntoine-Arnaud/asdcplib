@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_MXF.cpp
-    \version $Id: AS_DCP_MXF.cpp,v 1.36 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: AS_DCP_MXF.cpp,v 1.38 2015/02/23 21:57:05 jhurst Exp $
     \brief   AS-DCP library, misc classes and subroutines
 */
 
@@ -259,6 +259,16 @@ ASDCP::EssenceType(const std::string& filename, EssenceType_t& type)
 }
 
 //
+static bool
+string_is_xml(const ASDCP::FrameBuffer& buffer)
+{
+  std::string ns_prefix, type_name, namespace_name;
+  Kumu::AttributeList doc_attr_list;
+  return GetXMLDocType(buffer.RoData(), buffer.Size(),
+		       ns_prefix, type_name, namespace_name, doc_attr_list);
+}
+
+//
 ASDCP::Result_t
 ASDCP::RawEssenceType(const std::string& filename, EssenceType_t& type)
 {
@@ -324,7 +334,7 @@ ASDCP::RawEssenceType(const std::string& filename, EssenceType_t& type)
 	    {
 	      type = ESS_PCM_24b_48k;
 	    }
-	  else if ( Kumu::StringIsXML((const char*)FB.RoData(), FB.Size()) )
+	  else if ( string_is_xml(FB) )
 	    {
 	      type = ESS_TIMED_TEXT;
 	    }
@@ -384,6 +394,10 @@ ASDCP::RawEssenceType(const std::string& filename, EssenceType_t& type)
 		  else if ( ASDCP::ATMOS::IsDolbyAtmos(Kumu::PathJoin(filename, next_file)) )
 		    {
 		      type = ESS_DCDATA_DOLBY_ATMOS;
+		    }
+		  else
+		    {
+		      type = ESS_DCDATA_UNKNOWN;
 		    }
 		}
 	      

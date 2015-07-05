@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2012, John Hurst
+Copyright (c) 2003-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-test.cpp
-    \version $Id: asdcp-test.cpp,v 1.50 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: asdcp-test.cpp,v 1.52 2015/02/19 22:42:18 mschroffel Exp $       
     \brief   AS-DCP file manipulation utility
 
   This program provides command line access to the major features of the asdcplib
@@ -103,7 +103,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2003-2012 John Hurst\n\n\
+Copyright (c) 2003-2015 John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -240,9 +240,6 @@ decode_channel_fmt(const std::string& label_name)
 
   else if ( label_name == "7.1DS" )
     return PCM::CF_CFG_5;
-
-  else if ( label_name == "MCA" )
-    return PCM::CF_CFG_6;
 
   fprintf(stderr, "Error decoding channel format string: %s\n", label_name.c_str());
   fprintf(stderr, "Expecting '5.1', '6.1', '7.1', '7.1DS' or 'WTF'\n");

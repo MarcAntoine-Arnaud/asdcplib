@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    h__Writer.cpp
-    \version $Id: h__Writer.cpp,v 1.57 2013/09/02 22:00:08 jhurst Exp $
+    \version $Id: h__Writer.cpp,v 1.58 2014/08/07 18:51:20 jhurst Exp $
     \brief   MXF file writer base class
 */
 
@@ -65,7 +65,7 @@ ASDCP::AddDMScrypt(Partition& HeaderPart, SourcePackage& Package,
   HeaderPart.AddChildObject(Segment);
   Seq->StructuralComponents.push_back(Segment->InstanceUID);
   Segment->EventComment = "AS-DCP KLV Encryption";
-  
+
   CryptographicFramework* CFW = new CryptographicFramework(Dict);
   HeaderPart.AddChildObject(CFW);
   Segment->DMFramework = CFW->InstanceUID;

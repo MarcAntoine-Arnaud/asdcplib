@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2009, John Hurst
+Copyright (c) 2005-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    Wav.cpp
-    \version $Id: Wav.cpp,v 1.13 2013/05/28 18:13:12 jhurst Exp $
+    \version $Id: Wav.cpp,v 1.14 2015/02/22 20:16:28 jhurst Exp $
     \brief   Wave file common elements
 */
 
@@ -408,7 +408,7 @@ ASDCP::RF64::SimpleRF64Header::WriteToFile(Kumu::FileWriter& OutFile) const
 
   ui32_t write_count = 0;
   ui64_t RIFF_len = data_len + SimpleWavHeaderLength - 8;
-  DefaultLogSink().Debug("RIFF_len is %llu.\n", RIFF_len);
+  //  DefaultLogSink().Debug("RIFF_len is %llu.\n", RIFF_len);
   byte_t* tmp_header = NULL;
   ui32_t header_len = 0;
 

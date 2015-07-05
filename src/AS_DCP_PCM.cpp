@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_PCM.cpp
-    \version $Id: AS_DCP_PCM.cpp,v 1.45 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: AS_DCP_PCM.cpp,v 1.47 2014/10/02 21:02:24 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -170,7 +170,7 @@ ASDCP::PCM::operator << (std::ostream& strm, const AudioDescriptor& ADesc)
       break;
 
     case CF_CFG_6:
-      strm << "Config 6 (ST 377-1 MCA)";
+      strm << "Config 6 (ST 377-4 MCA)";
       break;
   }
   strm << std::endl;
@@ -276,6 +276,12 @@ ASDCP::PCM::MXFReader::h__Reader::OpenRead(const std::string& filename)
 	}
     }
 
+  if ( m_ADesc.ContainerDuration == 0 )
+    {
+      DefaultLogSink().Error("ContainerDuration unset.\n");
+      return RESULT_FORMAT;
+    }
+
   // check for sample/frame rate sanity
   if ( ASDCP_SUCCESS(result)
        && m_ADesc.EditRate != EditRate_24
@@ -297,14 +303,14 @@ ASDCP::PCM::MXFReader::h__Reader::OpenRead(const std::string& filename)
 			     m_ADesc.EditRate.Numerator, m_ADesc.EditRate.Denominator);
 
       // oh, they gave us the audio sampling rate instead, assume 24/1
-      if ( m_ADesc.EditRate == SampleRate_48k )
+      if ( m_ADesc.EditRate == SampleRate_48k || m_ADesc.EditRate == SampleRate_96k )
 	{
 	  DefaultLogSink().Warn("adjusting EditRate to 24/1\n"); 
 	  m_ADesc.EditRate = EditRate_24;
 	}
       else
 	{
-      DefaultLogSink().Error("PCM EditRate not in expected value range.\n");
+	  DefaultLogSink().Error("PCM EditRate not in expected value range.\n");
 	  // or we just drop the hammer
 	  return RESULT_FORMAT;
 	}
@@ -324,6 +330,11 @@ ASDCP::PCM::MXFReader::h__Reader::ReadFrame(ui32_t FrameNum, FrameBuffer& FrameB
 {
   if ( ! m_File.IsOpen() )
     return RESULT_INIT;
+
+  if ( (FrameNum+1) > m_ADesc.ContainerDuration )
+    {
+      return RESULT_RANGE;
+    }
 
   assert(m_Dict);
   return ReadEKLVFrame(FrameNum, FrameBuf, m_Dict->ul(MDD_WAVEssence), Ctx, HMAC);

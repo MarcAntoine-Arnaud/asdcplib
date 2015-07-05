@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2011, John Hurst
+Copyright (c) 2004-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -24,12 +24,12 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-/*! \file    JP2K_Sequence_Parser.cpp
-    \version $Id: JP2K_Sequence_Parser.cpp,v 1.8 2011/05/13 01:50:19 jhurst Exp $
+/*! \file    PHDR_Sequence_Parser.cpp
+    \version $Id: PHDR_Sequence_Parser.cpp,v 1.2 2015/01/22 21:05:58 jhurst Exp $
     \brief   AS-DCP library, JPEG 2000 codestream essence reader implementation
 */
 
-#include <AS_DCP.h>
+#include <AS_02_PHDR.h>
 #include <KM_fileio.h>
 #include <KM_log.h>
 #include <list>
@@ -38,6 +38,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <assert.h>
 
+using namespace Kumu;
 using namespace ASDCP;
 
 
@@ -59,7 +60,7 @@ public:
   }
 
   //
-  Result_t InitFromDirectory(const char* path)
+  Result_t InitFromDirectory(const std::string& path)
   {
     char next_file[Kumu::MaxFilePath];
     Kumu::DirScanner Scanner;
@@ -72,15 +73,13 @@ public:
 
 	while ( ASDCP_SUCCESS(Scanner.GetNext(next_file)) )
 	  {
-	    if ( next_file[0] == '.' ) // no hidden files or internal links
-	      continue;
+	    if ( PathGetExtension(next_file) == "j2c" )
+	      {
+		std::string path = PathJoin(m_DirName, next_file);
 
-	    std::string Str(m_DirName);
-	    Str += "/";
-	    Str += next_file;
-
-	    if ( ! Kumu::PathIsDirectory(Str) )
-	      push_back(Str);
+		if ( ! Kumu::PathIsDirectory(path) )
+		  push_back(path);
+	      }
 	  }
 
 	sort();
@@ -92,13 +91,13 @@ public:
 
 //------------------------------------------------------------------------------------------
 
-class ASDCP::JP2K::SequenceParser::h__SequenceParser
+class AS_02::PHDR::SequenceParser::h__SequenceParser
 {
   ui32_t             m_FramesRead;
   Rational           m_PictureRate;
   FileList           m_FileList;
   FileList::iterator m_CurrentFile;
-  CodestreamParser   m_Parser;
+  ASDCP::JP2K::CodestreamParser   m_Parser;
   bool               m_Pedantic;
 
   Result_t OpenRead();
@@ -106,7 +105,7 @@ class ASDCP::JP2K::SequenceParser::h__SequenceParser
   ASDCP_NO_COPY_CONSTRUCT(h__SequenceParser);
 
 public:
-  PictureDescriptor  m_PDesc;
+  ASDCP::JP2K::PictureDescriptor  m_PDesc;
 
   h__SequenceParser() : m_FramesRead(0), m_Pedantic(false)
   {
@@ -119,7 +118,7 @@ public:
     Close();
   }
 
-  Result_t OpenRead(const char* filename, bool pedantic);
+  Result_t OpenRead(const std::string& filename, bool pedantic);
   Result_t OpenRead(const std::list<std::string>& file_list, bool pedantic);
   void     Close() {}
 
@@ -136,16 +135,16 @@ public:
 
 //
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead()
+AS_02::PHDR::SequenceParser::h__SequenceParser::OpenRead()
 {
   if ( m_FileList.empty() )
     return RESULT_ENDOFFILE;
 
   m_CurrentFile = m_FileList.begin();
-  CodestreamParser Parser;
-  FrameBuffer TmpBuffer;
+  ASDCP::JP2K::CodestreamParser Parser;
+  AS_02::PHDR::FrameBuffer TmpBuffer;
 
-  Kumu::fsize_t file_size = Kumu::FileSize((*m_CurrentFile).c_str());
+  Kumu::fsize_t file_size = Kumu::FileSize(*m_CurrentFile);
 
   if ( file_size == 0 )
     return RESULT_NOT_FOUND;
@@ -154,7 +153,7 @@ ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead()
   Result_t result = TmpBuffer.Capacity((ui32_t) file_size);
 
   if ( ASDCP_SUCCESS(result) )
-    result = Parser.OpenReadFrame((*m_CurrentFile).c_str(), TmpBuffer);
+    result = Parser.OpenReadFrame(*m_CurrentFile, TmpBuffer);
       
   if ( ASDCP_SUCCESS(result) )
     result = Parser.FillPictureDescriptor(m_PDesc);
@@ -168,9 +167,8 @@ ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead()
 
 //
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead(const char* filename, bool pedantic)
+AS_02::PHDR::SequenceParser::h__SequenceParser::OpenRead(const std::string& filename, bool pedantic)
 {
-  ASDCP_TEST_NULL_STR(filename);
   m_Pedantic = pedantic;
 
   Result_t result = m_FileList.InitFromDirectory(filename);
@@ -184,7 +182,7 @@ ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead(const char* filename, b
 
 //
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::h__SequenceParser::OpenRead(const std::list<std::string>& file_list, bool pedantic)
+AS_02::PHDR::SequenceParser::h__SequenceParser::OpenRead(const std::list<std::string>& file_list, bool pedantic)
 {
   m_Pedantic = pedantic;
   m_FileList = file_list;
@@ -284,27 +282,42 @@ operator==(const ASDCP::JP2K::PictureDescriptor& lhs, const ASDCP::JP2K::Picture
 
 //
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::h__SequenceParser::ReadFrame(FrameBuffer& FB)
+AS_02::PHDR::SequenceParser::h__SequenceParser::ReadFrame(FrameBuffer& FB)
 {
   if ( m_CurrentFile == m_FileList.end() )
     return RESULT_ENDOFFILE;
 
   // open the file
-  Result_t result = m_Parser.OpenReadFrame((*m_CurrentFile).c_str(), FB);
+  Result_t result = m_Parser.OpenReadFrame(*m_CurrentFile, FB);
+  std::string metadata_path = PathJoin(PathDirname(*m_CurrentFile), PathSetExtension(*m_CurrentFile, "xml"));
 
-  if ( ASDCP_SUCCESS(result) && m_Pedantic )
+  if ( KM_SUCCESS(result) )
     {
-      PictureDescriptor PDesc;
+      result = ReadFileIntoString(metadata_path, FB.OpaqueMetadata);
+
+      if ( KM_FAILURE(result) )
+	{
+	  DefaultLogSink().Error("%s: %s\n", metadata_path.c_str(), result.Label());
+	}
+    }
+  else
+    {
+      DefaultLogSink().Error("%s: %s\n", m_CurrentFile->c_str(), result.Label());
+    }
+
+  if ( KM_SUCCESS(result) && m_Pedantic )
+    {
+      ASDCP::JP2K::PictureDescriptor PDesc;
       result = m_Parser.FillPictureDescriptor(PDesc);
 
-      if ( ASDCP_SUCCESS(result) && ! ( m_PDesc == PDesc ) )
+      if ( KM_SUCCESS(result) && ! ( m_PDesc == PDesc ) )
 	{
 	  Kumu::DefaultLogSink().Error("JPEG-2000 codestream parameters do not match at frame %d\n", m_FramesRead + 1);
 	  result = RESULT_RAW_FORMAT;
 	}
     }
 
-  if ( ASDCP_SUCCESS(result) )
+  if ( KM_SUCCESS(result) )
     {
       FB.FrameNumber(m_FramesRead++);
       m_CurrentFile++;
@@ -316,39 +329,39 @@ ASDCP::JP2K::SequenceParser::h__SequenceParser::ReadFrame(FrameBuffer& FB)
 
 //------------------------------------------------------------------------------------------
 
-ASDCP::JP2K::SequenceParser::SequenceParser()
+AS_02::PHDR::SequenceParser::SequenceParser()
 {
 }
 
-ASDCP::JP2K::SequenceParser::~SequenceParser()
+AS_02::PHDR::SequenceParser::~SequenceParser()
 {
 }
 
 // Opens the stream for reading, parses enough data to provide a complete
 // set of stream metadata for the MXFWriter below.
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::OpenRead(const char* filename, bool pedantic) const
+AS_02::PHDR::SequenceParser::OpenRead(const std::string& filename, bool pedantic) const
 {
-  const_cast<ASDCP::JP2K::SequenceParser*>(this)->m_Parser = new h__SequenceParser;
+  const_cast<AS_02::PHDR::SequenceParser*>(this)->m_Parser = new h__SequenceParser;
 
   Result_t result = m_Parser->OpenRead(filename, pedantic);
 
   if ( ASDCP_FAILURE(result) )
-    const_cast<ASDCP::JP2K::SequenceParser*>(this)->m_Parser.release();
+    const_cast<AS_02::PHDR::SequenceParser*>(this)->m_Parser.release();
 
   return result;
 }
 
 //
 Result_t
-ASDCP::JP2K::SequenceParser::OpenRead(const std::list<std::string>& file_list, bool pedantic) const
+AS_02::PHDR::SequenceParser::OpenRead(const std::list<std::string>& file_list, bool pedantic) const
 {
-  const_cast<ASDCP::JP2K::SequenceParser*>(this)->m_Parser = new h__SequenceParser;
+  const_cast<AS_02::PHDR::SequenceParser*>(this)->m_Parser = new h__SequenceParser;
 
   Result_t result = m_Parser->OpenRead(file_list, pedantic);
 
   if ( ASDCP_FAILURE(result) )
-    const_cast<ASDCP::JP2K::SequenceParser*>(this)->m_Parser.release();
+    const_cast<AS_02::PHDR::SequenceParser*>(this)->m_Parser.release();
 
   return result;
 }
@@ -356,7 +369,7 @@ ASDCP::JP2K::SequenceParser::OpenRead(const std::list<std::string>& file_list, b
 
 // Rewinds the stream to the beginning.
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::Reset() const
+AS_02::PHDR::SequenceParser::Reset() const
 {
   if ( m_Parser.empty() )
     return RESULT_INIT;
@@ -367,7 +380,7 @@ ASDCP::JP2K::SequenceParser::Reset() const
 // Places a frame of data in the frame buffer. Fails if the buffer is too small
 // or the stream is empty.
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::ReadFrame(FrameBuffer& FB) const
+AS_02::PHDR::SequenceParser::ReadFrame(AS_02::PHDR::FrameBuffer& FB) const
 {
   if ( m_Parser.empty() )
     return RESULT_INIT;
@@ -377,7 +390,7 @@ ASDCP::JP2K::SequenceParser::ReadFrame(FrameBuffer& FB) const
 
 //
 ASDCP::Result_t
-ASDCP::JP2K::SequenceParser::FillPictureDescriptor(PictureDescriptor& PDesc) const
+AS_02::PHDR::SequenceParser::FillPictureDescriptor(ASDCP::JP2K::PictureDescriptor& PDesc) const
 {
   if ( m_Parser.empty() )
     return RESULT_INIT;
@@ -388,5 +401,5 @@ ASDCP::JP2K::SequenceParser::FillPictureDescriptor(PictureDescriptor& PDesc) con
 
 
 //
-// end JP2K_Sequence_Parser.cpp
+// end PHDR_Sequence_Parser.cpp
 //

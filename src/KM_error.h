@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2011, John Hurst
+Copyright (c) 2004-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_error.h
-    \version $Id: KM_error.h,v 1.12 2011/05/16 04:33:31 jhurst Exp $
+    \version $Id: KM_error.h,v 1.14 2014/09/21 13:27:43 jhurst Exp $
     \brief   error reporting support
   */
 
@@ -105,7 +105,8 @@ namespace Kumu
   KM_DECLARE_RESULT(NOTAFILE,   -19,  "Filename not found.");
   KM_DECLARE_RESULT(UNKNOWN,    -20,  "Unknown result code.");
   KM_DECLARE_RESULT(DIR_CREATE, -21,  "Unable to create directory.");
-  // -22 is reserved
+  KM_DECLARE_RESULT(NOT_EMPTY,  -22,  "Unable to delete non-empty directory.");
+  // 23-100 are reserved
  
 } // namespace Kumu
 
@@ -134,6 +135,22 @@ namespace Kumu
   if ( (p)[0] == '\0' ) { \
     return Kumu::RESULT_NULL_STR; \
   }
+
+// RESULT_STATE is ambiguous.  Use these everywhere it is assigned to provide some context
+#define KM_RESULT_STATE_TEST_IMPLICIT()					\
+  if ( result == Kumu::RESULT_STATE ) {					\
+    Kumu::DefaultLogSink().Error("RESULT_STATE RETURNED at %s (%d)\n", __FILE__, __LINE__); \
+  }
+
+#define KM_RESULT_STATE_TEST_THIS(_this__r_)				\
+  if ( _this__r_ == Kumu::RESULT_STATE ) {				\
+    Kumu::DefaultLogSink().Error("RESULT_STATE RETURNED at %s (%d)\n", __FILE__, __LINE__); \
+  }
+
+#define KM_RESULT_STATE_HERE()						\
+  Kumu::DefaultLogSink().Error("RESULT_STATE RETURNED at %s (%d)\n", __FILE__, __LINE__);
+
+
 
 namespace Kumu
 {

@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    PCM_Parser.cpp
-    \version $Id: PCM_Parser.cpp,v 1.9 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: PCM_Parser.cpp,v 1.10 2015/02/19 19:06:57 jhurst Exp $
     \brief   AS-DCP library, PCM raw essence reader implementation
 */
 
@@ -128,22 +128,22 @@ ASDCP::PCM::WAVParser::h__WAVParser::OpenRead(const std::string& filename, const
 	      m_ADesc.ChannelFormat = PCM::CF_NONE;
 	      Reset();
 	    }
-      else
-        {
-          SimpleRF64Header RF64Header;
-          m_FileReader.Seek(0);
-          result = RF64Header.ReadFromFile(m_FileReader, &m_DataStart);
+	  else
+	    {
+	      SimpleRF64Header RF64Header;
+	      m_FileReader.Seek(0);
+	      result = RF64Header.ReadFromFile(m_FileReader, &m_DataStart);
 
-          if ( ASDCP_SUCCESS(result) )
-            {
-                RF64Header.FillADesc(m_ADesc, PictureRate);
-                m_FrameBufferSize = ASDCP::PCM::CalcFrameBufferSize(m_ADesc);
-                m_DataLength = RF64Header.data_len;
-                m_ADesc.ContainerDuration = m_DataLength / m_FrameBufferSize;
-                m_ADesc.ChannelFormat = PCM::CF_NONE;
-                Reset();
-            }
-        }
+	      if ( ASDCP_SUCCESS(result) )
+		{
+		  RF64Header.FillADesc(m_ADesc, PictureRate);
+		  m_FrameBufferSize = ASDCP::PCM::CalcFrameBufferSize(m_ADesc);
+		  m_DataLength = RF64Header.data_len;
+		  m_ADesc.ContainerDuration = m_DataLength / m_FrameBufferSize;
+		  m_ADesc.ChannelFormat = PCM::CF_NONE;
+		  Reset();
+		}
+	    }
 	}
     }
 
@@ -156,8 +156,10 @@ ASDCP::PCM::WAVParser::h__WAVParser::ReadFrame(FrameBuffer& FB)
 {
   FB.Size(0);
 
-  if ( m_EOF || m_ReadCount >= m_DataLength )
-    return RESULT_ENDOFFILE;
+  if ( m_EOF )
+    {
+      return RESULT_ENDOFFILE;
+    }
 
   if ( FB.Capacity() < m_FrameBufferSize )
     {
@@ -174,7 +176,9 @@ ASDCP::PCM::WAVParser::h__WAVParser::ReadFrame(FrameBuffer& FB)
       m_EOF = true;
 
       if ( read_count > 0 )
-	result = RESULT_OK;
+	{
+	  result = RESULT_OK;
+	}
     }
 
   if ( ASDCP_SUCCESS(result) )
@@ -182,6 +186,11 @@ ASDCP::PCM::WAVParser::h__WAVParser::ReadFrame(FrameBuffer& FB)
       m_ReadCount += read_count;
       FB.Size(read_count);
       FB.FrameNumber(m_FramesRead++);
+
+      if ( read_count < FB.Capacity() )
+	{
+	  memset(FB.Data() + FB.Size(), 0, FB.Capacity() - FB.Size());
+	}
     }
 
   return result;

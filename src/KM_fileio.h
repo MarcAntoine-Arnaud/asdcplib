@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2009, John Hurst
+Copyright (c) 2004-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_fileio.h
-    \version $Id: KM_fileio.h,v 1.19 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: KM_fileio.h,v 1.21 2014/09/21 13:27:43 jhurst Exp $
     \brief   portable file i/o
   */
 
@@ -69,6 +69,45 @@ namespace Kumu
       Result_t Close();
       Result_t GetNext(char*);
     };
+
+
+  // 
+  enum DirectoryEntryType_t {
+    DET_FILE,
+    DET_DIR,
+    DET_DEV,
+    DET_LINK
+  };
+
+  //
+  class DirScannerEx
+  {
+    std::string m_Dirname;
+#ifdef KM_WIN32
+    __int64               m_Handle;
+    struct _finddatai64_t m_FileInfo;
+#else
+    DIR*       m_Handle;
+#endif
+
+    KM_NO_COPY_CONSTRUCT(DirScannerEx);
+
+  public:
+    
+    DirScannerEx();
+    ~DirScannerEx() { Close(); }
+
+    Result_t Open(const std::string& dirname);
+    Result_t Close();
+
+
+    inline Result_t GetNext(std::string& next_item_name) {
+      DirectoryEntryType_t ft;
+      return GetNext(next_item_name, ft);
+    }
+
+    Result_t GetNext(std::string& next_item_name, DirectoryEntryType_t& next_item_type);
+  };
 
 #ifdef KM_WIN32
   typedef __int64  fsize_t;
@@ -234,6 +273,9 @@ namespace Kumu
 
   // Recursively remove a file or directory
   Result_t DeletePath(const std::string& pathname);
+
+  // Remove the path only if it is a directory that is empty.
+  Result_t DeleteDirectoryIfEmpty(const std::string& path);
 
   //------------------------------------------------------------------------------------------
   // File I/O Wrappers

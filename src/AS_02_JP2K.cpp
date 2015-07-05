@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02_JP2K.cpp
-  \version $Id: AS_02_JP2K.cpp,v 1.13 2014/01/02 23:29:21 jhurst Exp $
+  \version $Id: AS_02_JP2K.cpp,v 1.14 2014/09/21 13:27:43 jhurst Exp $
   \brief   AS-02 library, JPEG 2000 essence reader and writer implementation
 */
 
@@ -264,7 +264,8 @@ AS_02::JP2K::MXFWriter::h__Writer::OpenWrite(const std::string& filename,
 {
   if ( ! m_State.Test_BEGIN() )
     {
-      return RESULT_STATE;
+      KM_RESULT_STATE_HERE();
+	return RESULT_STATE;
     }
 
   if ( m_IndexStrategy != AS_02::IS_FOLLOW )
@@ -319,7 +320,8 @@ AS_02::JP2K::MXFWriter::h__Writer::SetSourceStream(const std::string& label, con
   assert(m_Dict);
   if ( ! m_State.Test_INIT() )
     {
-      return RESULT_STATE;
+      KM_RESULT_STATE_HERE();
+	return RESULT_STATE;
     }
 
   memcpy(m_EssenceUL, m_Dict->ul(MDD_JPEG2000Essence), SMPTE_UL_LENGTH);
@@ -378,7 +380,10 @@ Result_t
 AS_02::JP2K::MXFWriter::h__Writer::Finalize()
 {
   if ( ! m_State.Test_RUNNING() )
-    return RESULT_STATE;
+    {
+      KM_RESULT_STATE_HERE();
+	return RESULT_STATE;
+    }
 
   Result_t result = m_State.Goto_FINAL();
 

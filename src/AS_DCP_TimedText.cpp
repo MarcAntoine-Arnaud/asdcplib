@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2013, John Hurst
+Copyright (c) 2008-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_TimedText.cpp
-    \version $Id: AS_DCP_TimedText.cpp,v 1.34 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: AS_DCP_TimedText.cpp,v 1.37 2015/02/22 20:16:28 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -569,6 +569,9 @@ ASDCP::TimedText::MXFWriter::h__Writer::SetSourceStream(ASDCP::TimedText::TimedT
       resourceSubdescriptor->EssenceStreamID = m_EssenceStreamID++;
       m_EssenceSubDescriptorList.push_back((FileDescriptor*)resourceSubdescriptor);
       m_EssenceDescriptor->SubDescriptors.push_back(resourceSubdescriptor->InstanceUID);
+
+      // 72 == sizeof K, L, instanceuid, uuid + sizeof int32 + tag/len * 4
+      m_HeaderSize += ( resourceSubdescriptor->MIMEMediaType.ArchiveLength() * 2 /*ArchiveLength is broken*/ ) + 72;
     }
 
   m_EssenceStreamID = 10;
@@ -585,7 +588,7 @@ ASDCP::TimedText::MXFWriter::h__Writer::SetSourceStream(ASDCP::TimedText::TimedT
 	}
       else
 	{
-	  DefaultLogSink().Error("Unable to write Interop timed-text MXF file.  Use SMOTE DCP options instead.\n");
+	  DefaultLogSink().Error("Unable to write Interop timed-text MXF file.  Use SMPTE DCP options instead.\n");
 	  return RESULT_FORMAT;
 	}
 

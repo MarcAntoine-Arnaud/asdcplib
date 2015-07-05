@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-unwrap.cpp
-    \version $Id: as-02-unwrap.cpp,v 1.7 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: as-02-unwrap.cpp,v 1.11 2015/02/19 19:06:57 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program extracts picture and sound from AS-02 files.
@@ -69,7 +69,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
+Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -376,19 +376,34 @@ read_JP2K_file(CommandOptions& Options)
     {
       result = Reader.ReadFrame(i, FrameBuffer, Context, HMAC);
 
-      if ( ASDCP_SUCCESS(result) )
+      char filename[1024];
+      snprintf(filename, 1024, name_format, Options.file_prefix, i);
+
+      if ( ASDCP_SUCCESS(result) && Options.verbose_flag )
+	{
+	  printf("Frame %d, %d bytes", i, FrameBuffer.Size());
+
+	  if ( ! Options.no_write_flag )
+	    {
+	      printf(" -> %s", filename);
+	    }
+
+	  printf("\n");
+	}
+
+      if ( ASDCP_SUCCESS(result)  && ( ! Options.no_write_flag ) )
 	{
 	  Kumu::FileWriter OutFile;
-	  char filename[256];
 	  ui32_t write_count;
-	  snprintf(filename, 256, name_format, Options.file_prefix, i);
 	  result = OutFile.OpenWrite(filename);
 
 	  if ( ASDCP_SUCCESS(result) )
 	    result = OutFile.Write(FrameBuffer.Data(), FrameBuffer.Size(), &write_count);
 
-	  if ( Options.verbose_flag )
-	    FrameBuffer.Dump(stderr, Options.fb_dump_size);
+	  if ( ASDCP_SUCCESS(result) && Options.verbose_flag )
+	    {
+	      FrameBuffer.Dump(stderr, Options.fb_dump_size);
+	    }
 	}
     }
 
@@ -535,6 +550,13 @@ read_PCM_file(CommandOptions& Options)
 	      FrameBuffer.Dump(stderr, Options.fb_dump_size);
 	    }
 
+	  if ( FrameBuffer.Size() != FrameBuffer.Capacity() )
+	    {
+	      fprintf(stderr, "Last frame is incomplete, padding with zeros.\n");
+	      // actually, it has already been zeroed for us, we just need to recognize the appropriate size
+	      FrameBuffer.Size(FrameBuffer.Capacity());
+	    }
+
 	  result = OutWave.WriteFrame(FrameBuffer);
 	}
     }
@@ -582,7 +604,7 @@ main(int argc, const char** argv)
 	  break;
 
 	default:
-	  fprintf(stderr, "%s: Unknown file type, not ASDCP essence.\n", Options.input_filename);
+	  fprintf(stderr, "%s: Unknown file type, not AS-02 essence.\n", Options.input_filename);
 	  return 5;
 	}
     }

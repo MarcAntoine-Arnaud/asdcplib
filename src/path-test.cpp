@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    path-test.cpp
-  \version $Id: path-test.cpp,v 1.9 2013/02/08 19:11:58 jhurst Exp $
+  \version $Id: path-test.cpp,v 1.10 2015/02/22 20:16:28 jhurst Exp $
   \brief     test harness for path manglers defined in KM_fileio.h
 */
 
@@ -141,6 +141,7 @@ main(int argc, const char** argv)
   FreeSpaceForPath("/", free_space, total_space);
   cerr << "Free space: " << free_space << endl;
   cerr << "Total space: " << total_space << endl;
+  cerr << "Used space: " << ( (total_space - free_space ) / float(total_space) ) << endl;
 
   cerr << "OK" << endl;
 

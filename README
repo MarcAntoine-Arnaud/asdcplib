@@ -1,5 +1,5 @@
 
-$Id: README,v 1.89 2014/01/06 18:59:41 mikey Exp $
+$Id: README,v 1.96 2015/02/23 21:59:40 jhurst Exp $
 
 The asdcplib library is a set of objects that offer
 simplified access to files conforming to the sound and
@@ -129,6 +129,17 @@ blackwave - Write a WAVE file full of zeros,  Used to make filler
 
 j2c-test - Displays information about JP2K codestreams.
 
+Experimental feature: Prototype for High Dynamic Range is a wrapper
+for the IMF application that allows JPEG-2000 codestreams to be paired
+with opaque blobs of metadata.  AS-02 support must be enabled to
+build this feature, so --enable-as-02 must be enabled if
+--enable-phdr is to be used.  The following executable programs will be
+built:
+
+phdr-wrap - Writes AS-02 PHDR Essence Component files.
+
+phdr-unwrap - Extracts essence from AS-02 PHDR Essence Component files.
+
 
 Documentation
 
@@ -139,6 +150,99 @@ command-line utilities all respond to -h.
 
 
 Change History
+
+
+2015-02-23 - bug fixes
+  o Fixed a new bug introduced by the fix to large numbers of subtitle ancillary
+    resources.
+  o Added support for generic Aux Data (ST 429-14) to asdcp-wrap.
+
+
+2015-02-19 - PHDR feature, bug fixes
+  o Modified PCMParser and PCMParserList to return partial frame buffers at the
+    end of a WAV input file.  This was needed to allow wrapping all samples into
+    an AS-02 audio file (which is clip-wrapped) in the case where the input file
+    has an odd number of samples with respect to the frame buffer size being
+    used.  If there is more than one input file the length of the last buffer
+    will be determined by PCMParserList to be the shortest of the input files.
+    Prior to this change, partial samples in an input WAV file have been
+    abandoned (i.e., not written out to the MXF file).  As a result, AS-DCP
+    applications will have to decide whether to abandon the partial last frame
+    (usually detected by testing frame_buffer.Size() != frame_buffer.Capacity())
+    or write it to the MXF file.  Programs written to the old API will write the
+    partial frame (i.e., new behavior.)  This should not be harmful since the
+    remainder of the buffer is zeroed and the output file will contain one
+    additional edit unit compared to the previous version.
+  o asdcp-wrap has been modified to test for the partial buffer and by default
+    will complain and abandon the buffer (i.e., same behavior but with a warning
+    message.)  A new command line switch (-g) alters this behavior and writes
+    the buffer to the MXF file (it still warns the user that this condition is
+    present.)
+  o as-02-wrap now wraps all samples from the input file to the MXF file. There
+    is no padding, the clip is exactly the set of samples from the input.
+  o as-02 unwrap is temporarily restricted to creating wav files that are
+    aligned with the frame buffer size.  This means that the output file will
+    be longer than the original WAV input in the case where the input file has
+    an odd number of samples with respect to the frame buffer size being used.
+    The pad samples are zero (silence).
+  o Modified CalcFramesFromDurationInSamples() to increment the count by one for
+    the case where the input file has an odd number of samples with respect to
+    the frame buffer size being used (previously it truncated the odd samples.)
+  o Fixed ST 429-5 / ST 2067-5 wrapping to increase header space when ancillary
+    resources are present (fixes a bug that cause the header to overflow the
+    allotted space when large numbers of PNG files were present.)
+  o Refactored GetXMLDocType() to use the XML parser.
+  o Added ParseFirstFromString() method to Kumu::XMLElement
+  o Removed Kumu::StringIsXML from the API.
+  o Added ASDCP::MXF::RGBALayout type
+  o Added J2CLayout property to JPEG2000PictureSubDescriptor
+  o Changed km_token_split() to retain empty elements in the output list
+  o Added PHDR wrapping for AS-02.
+  o Added J2CLayout property to the JPEG2000PictureSubDescriptor.  This
+    support is preliminary: the Raw data type is being used instead of
+    RGBALayout type, which will be in the next release.
+
+
+2014-10-2 - Bug fixes and enhancements, 2.2.6
+  o Fixed erroneous 377-4 MCA identifier in AS_DCP_PCM dump routine
+  o Fixed erroneous byte 13 in
+    WaveAudioDescriptor_ReferenceAudioAlignmentLevel label
+  o Added missing implementation of -W option to as-02.unwrap
+  o Fixed erroneous use of d-cinema ChannelAssignment label in as-02-wrap
+
+
+2014-10-01 - Bug fixes and enhancements, 2.2.5
+  o Finished AS-02 text wrap/unwrap
+  o Fixed fractional seconds parsing for Timestamp objects
+  o Updated KLVPacket to use 64-bit length; allows huge packets
+    in AS-02 PCM files
+  o cleaned up use of atoi() in the library
+
+
+2014-07-09 - Additional IMF/AS-02 support, bug fixes and enhancements, 2.1.4
+  o Added IMF App 2 edit rates in AS_02 namespace: EditRate_29_97, 
+    EditRate_59_94. 
+  o Revised AEC CBC context objects to copy the key rather than  
+    keep the reference passed in to it.
+  o Addressed a bug that would allow unimpeded iteration of component 
+    values in a JP2K::PictureDescriptor object.
+  o Addressed a bug that was incorrectly recording the sequence Duration 
+    in MXF Track objects.
+  o Added ASDCP::AtmosSyncChannelMixer::AppendSilenceChannels()
+  o Added a QCD decoder to the j2c parser.
+  o Altered ASDCP::KLVPacket::HasUL() to use version-blind matching.
+  o Fixed an uninitialized variable in MemIOReader::ReadString() that  
+    caused unbounded reads.
+  o Fixed broken ByteString::ArchiveLength() method
+  o Fixed broken version numbers on SoundfieldGroupLinkID and  
+    GroupOfSoundfieldGroupsLinkID UL values.
+  o Added DBOXMotionCodePrimaryStream and DBOXMotionCodeSecondaryStream UL 
+    values to the internal dictionary.
+  o Added optional prefix handling to MCA label generator.
+  o Re-factored MCA label generator to include additional  
+    metadata (Thanks to Mike Radford).
+  o Added new options to as-02-wrap.
+
 
 2014-01-06 – Additional IMF/AS-02 support, bug fixes 2.1.1
   o Fixed missing-index-partion bugs for AS-02 files.

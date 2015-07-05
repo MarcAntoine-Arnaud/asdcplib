@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-wrap.cpp
-    \version $Id: as-02-wrap.cpp,v 1.13 2014/01/03 00:55:45 jhurst Exp $       
+    \version $Id: as-02-wrap.cpp,v 1.19 2015/02/19 19:08:21 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program wraps IMF essence (picture or sound) in to an AS-02 MXF file.
@@ -91,13 +91,23 @@ public:
     return;								\
   }
 
+
+//
+static void
+create_random_uuid(byte_t* uuidbuf)
+{
+  Kumu::UUID tmp_id;
+  GenRandomValue(tmp_id);
+  memcpy(uuidbuf, tmp_id.Value(), tmp_id.Size());
+}
+
 //
 void
 banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
+Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -111,33 +121,45 @@ usage(FILE* stream = stdout)
   fprintf(stream, "\
 USAGE: %s [-h|-help] [-V]\n\
 \n\
-       %s [-a <uuid>] [-b <buffer-size>] [-C <UL>] [-d <duration>]\n\
-          [-e|-E] [-f <start-frame>] [-j <key-id-string>] [-k <key-string>]\n\
-            [-M] [-m <expr>] [-r <n>/<d>] [-s <seconds>] [-v] [-W]\n\
-          [-z|-Z] <input-file>+ <output-file>\n\n",
+       %s [-a <uuid>] [-A <w>/<h>] [-b <buffer-size>] [-C <UL>] [-d <duration>]\n\
+            [-D <depth>] [-e|-E] [-i] [-j <key-id-string>] [-k <key-string>]\n\
+            [-M] [-m <expr>] [-p <ul>] [-r <n>/<d>] [-R] [-s <seconds>]\n\
+            [-t <min>] [-T <max>] [-u] [-v] [-W] [-x <int>] [-X <int>] [-Y]\n\
+            [-z|-Z] <input-file>+ <output-file>\n\n",
 	  PROGRAM_NAME, PROGRAM_NAME);
 
   fprintf(stream, "\
 Options:\n\
-  -C <UL>           - Set ChannelAssignment UL value\n\
   -h | -help        - Show help\n\
   -V                - Show version information\n\
+  -a <uuid>         - Specify the Asset ID of the file\n\
+  -A <w>/<h>        - Set aspect ratio for image (default 4/3)\n\
+  -b <buffer-size>  - Specify size in bytes of picture frame buffer\n\
+                      Defaults to 4,194,304 (4MB)\n\
+  -C <ul>           - Set ChannelAssignment UL value\n\
+  -d <duration>     - Number of frames to process, default all\n\
+  -D <depth>        - Component depth for YCbCr images (default: 10)\n\
   -e                - Encrypt JP2K headers (default)\n\
   -E                - Do not encrypt JP2K headers\n\
+  -F (0|1)          - Set field dominance for interlaced image (default: 0)\n\
+  -i                - Indicates input essence is interlaced fields (forces -Y)\n\
   -j <key-id-str>   - Write key ID instead of creating a random value\n\
   -k <key-string>   - Use key for ciphertext operations\n\
   -M                - Do not create HMAC values when writing\n\
   -m <expr>         - Write MCA labels using <expr>.  Example:\n\
                         51(L,R,C,LFE,Ls,Rs,),HI,VIN\n\
-  -a <UUID>         - Specify the Asset ID of the file\n\
-  -b <buffer-size>  - Specify size in bytes of picture frame buffer\n\
-                      Defaults to 4,194,304 (4MB)\n\
-  -d <duration>     - Number of frames to process, default all\n\
-  -f <start-frame>  - Starting frame number, default 0\n\
+  -p <ul>           - Set broadcast profile\n\
   -r <n>/<d>        - Edit Rate of the output file.  24/1 is the default\n\
+  -R                - Indicates RGB image essence (default)\n\
   -s <seconds>      - Duration of a frame-wrapped partition (default 60)\n\
+  -t <min>          - Set RGB component minimum code value (default: 0)\n\
+  -T <max>          - Set RGB component maximum code value (default: 1023)\n\
+  -u                - Print UL catalog to stderr\n\
   -v                - Verbose, prints informative messages to stderr\n\
   -W                - Read input file only, do not write source file\n\
+  -x <int>          - Horizontal subsampling degree (default: 2)\n\
+  -X <int>          - Vertical subsampling degree (default: 2)\n\
+  -Y                - Indicates YCbCr image essence (default: RGB)\n\
   -z                - Fail if j2c inputs have unequal parameters (default)\n\
   -Z                - Ignore unequal parameters in j2c inputs\n\
 \n\
@@ -151,14 +173,15 @@ decode_rational(const char* str_rat)
 {
   assert(str_rat);
   ui32_t Num = atoi(str_rat);
-  ui32_t Den = 0;
+  ui32_t Den = 1;
 
-  const char* den_str = strrchr(str_rat, ' ');
+  const char* den_str = strrchr(str_rat, '/');
   if ( den_str != 0 )
     Den = atoi(den_str+1);
 
   return ASDCP::Rational(Num, Den);
 }
+
 //
 //
 class CommandOptions
@@ -176,7 +199,6 @@ public:
   bool   no_write_flag;  // true if no output files are to be written
   bool   version_flag;   // true if the version display option was selected
   bool   help_flag;      // true if the help display option was selected
-  ui32_t start_frame;    // frame number to begin processing
   ui32_t duration;       // number of frames to be processed
   bool   j2c_pedantic;   // passed to JP2K::SequenceParser::OpenRead
   bool use_cdci_descriptor; // 
@@ -189,11 +211,20 @@ public:
   std::string out_file; //
   bool show_ul_values_flag;    /// if true, dump the UL table before going tp work.
   Kumu::PathList_t filenames;  // list of filenames to be processed
+
   UL channel_assignment;
   ASDCP::MXF::AS02_MCAConfigParser mca_config;
-  ui32_t cdci_depth;
+
+  UL picture_coding;
   ui32_t rgba_MaxRef;
   ui32_t rgba_MinRef;
+
+  ui32_t horizontal_subsampling;
+  ui32_t vertical_subsampling;
+  ui32_t component_depth;
+  ui8_t frame_layout;
+  ASDCP::Rational aspect_ratio;
+  ui8_t field_dominance;
   ui32_t mxf_header_size;
 
   //new attributes for AS-02 support 
@@ -204,11 +235,13 @@ public:
   CommandOptions(int argc, const char** argv) :
     error_flag(true), key_flag(false), key_id_flag(false), asset_id_flag(false),
     encrypt_header_flag(true), write_hmac(true), verbose_flag(false), fb_dump_size(0),
-    no_write_flag(false), version_flag(false), help_flag(false), start_frame(0),
+    no_write_flag(false), version_flag(false), help_flag(false),
     duration(0xffffffff), j2c_pedantic(true), use_cdci_descriptor(false), edit_rate(24,1), fb_size(FRAME_BUFFER_SIZE),
     show_ul_values_flag(false), index_strategy(AS_02::IS_FOLLOW), partition_space(60),
-    mca_config(g_dict), cdci_depth(0), rgba_MaxRef(1024), rgba_MinRef(0), mxf_header_size(16384)
-
+    mca_config(g_dict), rgba_MaxRef(1023), rgba_MinRef(0),
+    horizontal_subsampling(2), vertical_subsampling(2), component_depth(10),
+    frame_layout(0), aspect_ratio(ASDCP::Rational(4,3)), field_dominance(0),
+    mxf_header_size(16384)
   {
     memset(key_value, 0, KeyLen);
     memset(key_id_value, 0, UUIDlen);
@@ -228,6 +261,11 @@ public:
 	  {
 	    switch ( argv[i][1] )
 	      {
+	      case 'A':
+		TEST_EXTRA_ARG(i, 'A');
+		edit_rate = decode_rational(argv[i]);
+		break;
+
 	      case 'a':
 		asset_id_flag = true;
 		TEST_EXTRA_ARG(i, 'a');
@@ -253,12 +291,17 @@ public:
 		break;
 
 	      case 'C':
-		TEST_EXTRA_ARG(i, 'U');
+		TEST_EXTRA_ARG(i, 'C');
 		if ( ! channel_assignment.DecodeHex(argv[i]) )
 		  {
-		    fprintf(stderr, "Error decoding UL value: %s\n", argv[i]);
+		    fprintf(stderr, "Error decoding ChannelAssignment UL value: %s\n", argv[i]);
 		    return;
 		  }
+		break;
+
+	      case 'D':
+		TEST_EXTRA_ARG(i, 'D');
+		component_depth = abs(atoi(argv[i]));
 		break;
 
 	      case 'd':
@@ -269,14 +312,25 @@ public:
 	      case 'E': encrypt_header_flag = false; break;
 	      case 'e': encrypt_header_flag = true; break;
 
-	      case 'f':
-		TEST_EXTRA_ARG(i, 'f');
-		start_frame = abs(atoi(argv[i]));
+	      case 'F':
+		TEST_EXTRA_ARG(i, 'F');
+		field_dominance = abs(atoi(argv[i]));
+		if ( field_dominance > 1 )
+		  {
+		    fprintf(stderr, "Field dominance value must be \"0\" or \"1\"\n");
+		    return;
+		  }
 		break;
 
 	      case 'h': help_flag = true; break;
 
-	      case 'j': key_id_flag = true;
+	      case 'i':
+		frame_layout = 1;
+		use_cdci_descriptor = true;
+		break;
+
+	      case 'j':
+		key_id_flag = true;
 		TEST_EXTRA_ARG(i, 'j');
 		{
 		  ui32_t length;
@@ -314,9 +368,22 @@ public:
 		  }
 		break;
 
+	      case 'p':
+		TEST_EXTRA_ARG(i, 'p');
+		if ( ! picture_coding.DecodeHex(argv[i]) )
+		  {
+		    fprintf(stderr, "Error decoding PictureEssenceCoding UL value: %s\n", argv[i]);
+		    return;
+		  }
+		break;
+
 	      case 'r':
 		TEST_EXTRA_ARG(i, 'r');
 		edit_rate = decode_rational(argv[i]);
+		break;
+
+	      case 'R':
+		use_cdci_descriptor = false;
 		break;
 
 	      case 's':
@@ -324,10 +391,35 @@ public:
 		partition_space = abs(atoi(argv[i]));
 		break;
 
+	      case 't':
+		TEST_EXTRA_ARG(i, 't');
+		rgba_MinRef = abs(atoi(argv[i]));
+		break;
+
+	      case 'T':
+		TEST_EXTRA_ARG(i, 'T');
+		rgba_MaxRef = abs(atoi(argv[i]));
+		break;
+
 	      case 'u': show_ul_values_flag = true; break;
 	      case 'V': version_flag = true; break;
 	      case 'v': verbose_flag = true; break;
 	      case 'W': no_write_flag = true; break;
+
+	      case 'x':
+		TEST_EXTRA_ARG(i, 'x');
+		horizontal_subsampling = abs(atoi(argv[i]));
+		break;
+
+	      case 'X':
+		TEST_EXTRA_ARG(i, 'X');
+		vertical_subsampling = abs(atoi(argv[i]));
+		break;
+
+	      case 'Y':
+		use_cdci_descriptor = true;
+		break;
+
 	      case 'Z': j2c_pedantic = false; break;
 	      case 'z': j2c_pedantic = true; break;
 
@@ -362,6 +454,12 @@ public:
 
     out_file = filenames.back();
     filenames.pop_back();
+
+    if ( ! picture_coding.HasValue() )
+      {
+	picture_coding = UL(g_dict->ul(MDD_JP2KEssenceCompression_BroadcastProfile_1));
+      }
+
     error_flag = false;
   }
 };
@@ -424,12 +522,13 @@ write_JP2K_file(CommandOptions& Options)
 
 	  if ( ASDCP_SUCCESS(result) )
 	    {
-	      // TODO, select profile
-	      tmp_dscr->PictureEssenceCoding = UL(g_dict->ul(MDD_JP2KEssenceCompression_BroadcastProfile_1));
-	      tmp_dscr->ComponentDepth = Options.cdci_depth;
-
-	      // more options here
-
+	      tmp_dscr->PictureEssenceCoding = Options.picture_coding;
+	      tmp_dscr->HorizontalSubsampling = Options.horizontal_subsampling;
+	      tmp_dscr->VerticalSubsampling = Options.vertical_subsampling;
+	      tmp_dscr->ComponentDepth = Options.component_depth;
+	      tmp_dscr->FrameLayout = Options.frame_layout;
+	      tmp_dscr->AspectRatio = Options.aspect_ratio;
+	      tmp_dscr->FieldDominance = Options.field_dominance;
 	      essence_descriptor = static_cast<ASDCP::MXF::FileDescriptor*>(tmp_dscr);
 	    }
 	}
@@ -444,13 +543,9 @@ write_JP2K_file(CommandOptions& Options)
 
 	  if ( ASDCP_SUCCESS(result) )
 	    {
-	      // TODO, select profile
 	      tmp_dscr->PictureEssenceCoding = UL(g_dict->ul(MDD_JP2KEssenceCompression_BroadcastProfile_1));
 	      tmp_dscr->ComponentMaxRef = Options.rgba_MaxRef;
 	      tmp_dscr->ComponentMinRef = Options.rgba_MinRef;
-
-	      // more options here
-
 	      essence_descriptor = static_cast<ASDCP::MXF::FileDescriptor*>(tmp_dscr);
 	    }
 	}
@@ -473,9 +568,13 @@ write_JP2K_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -599,7 +698,7 @@ write_PCM_file(CommandOptions& Options)
 	    }
 
 	  // this is the d-cinema MCA label, what is the one for IMF?
-	  essence_descriptor->ChannelAssignment = g_dict->ul(MDD_DCAudioChannelCfg_MCA);
+	  essence_descriptor->ChannelAssignment = g_dict->ul(MDD_IMFAudioChannelCfg_MCA);
 	}
     }
 
@@ -620,9 +719,13 @@ write_PCM_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -656,14 +759,6 @@ write_PCM_file(CommandOptions& Options)
 
 	  if ( ASDCP_SUCCESS(result) )
 	    {
-	      if ( FrameBuffer.Size() != FrameBuffer.Capacity() )
-		{
-		  fprintf(stderr, "WARNING: Last frame read was short, PCM input is possibly not frame aligned.\n");
-		  fprintf(stderr, "Expecting %u bytes, got %u.\n", FrameBuffer.Capacity(), FrameBuffer.Size());
-		  result = RESULT_ENDOFFILE;
-		  continue;
-		}
-
 	      if ( Options.verbose_flag )
 		FrameBuffer.Dump(stderr, Options.fb_dump_size);
 
@@ -692,9 +787,6 @@ write_PCM_file(CommandOptions& Options)
 }
 
 
-
-#if 0
-// NOT YET, unfinished business with ST 2052-1
 
 
 //------------------------------------------------------------------------------------------
@@ -747,9 +839,13 @@ write_timed_text_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -811,8 +907,6 @@ write_timed_text_file(CommandOptions& Options)
 
   return result;
 }
-
-#endif
 
 //
 int

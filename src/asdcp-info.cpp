@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2012, John Hurst
+Copyright (c) 2003-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-info.cpp
-    \version $Id: asdcp-info.cpp,v 1.7 2013/12/15 23:34:13 jhurst Exp $
+    \version $Id: asdcp-info.cpp,v 1.11 2015/02/19 22:42:18 mschroffel Exp $
     \brief   AS-DCP file metadata utility
 
   This program provides metadata information about an AS-DCP file.
@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <KM_fileio.h>
 #include <AS_DCP.h>
+#include <AS_02.h>
 #include <MXF.h>
 #include <Metadata.h>
 
@@ -75,7 +76,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2003-2012 John Hurst\n\n\
+Copyright (c) 2003-2015 John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -477,7 +478,7 @@ public:
 	  {
 	    if ( last_stream_offset != 0 )
 	      {
-		ui64_t this_frame_size = entry.StreamOffset - last_stream_offset;
+		ui64_t this_frame_size = entry.StreamOffset - last_stream_offset - 20; // do not count the bytes that represent the KLV wrapping 
 		total_frame_bytes += this_frame_size;
 
 		if ( this_frame_size > largest_frame )
@@ -488,14 +489,17 @@ public:
 	  }
       }
 
-    // scale bytes to megabits
-    static const double mega_const = 1.0 / ( 1000000 / 8.0 );
+    if ( KM_SUCCESS(result) )
+      {
+	// scale bytes to megabits
+	static const double mega_const = 1.0 / ( 1000000 / 8.0 );
 
-    // we did not accumulate the first or last frame, so duration -= 2
-    double avg_bytes_frame = total_frame_bytes / ( m_Desc.ContainerDuration - 2 );
+	// we did not accumulate the first or last frame, so duration -= 2
+	double avg_bytes_frame = total_frame_bytes / ( m_Desc.ContainerDuration - 2 );
 
-    m_MaxBitrate = largest_frame * mega_const * m_Desc.EditRate.Quotient();
-    m_AvgBitrate = avg_bytes_frame * mega_const * m_Desc.EditRate.Quotient();
+	m_MaxBitrate = largest_frame * mega_const * m_Desc.EditRate.Quotient();
+	m_AvgBitrate = avg_bytes_frame * mega_const * m_Desc.EditRate.Quotient();
+      }
   }
 
   //
@@ -626,6 +630,13 @@ show_file_info(CommandOptions& Options)
     {
       FileInfoWrapper<ASDCP::ATMOS::MXFReader, MyAtmosDescriptor> wrapper;
       result = wrapper.file_info(Options, "Dolby ATMOS");
+    }
+  else if ( EssenceType == ESS_AS02_PCM_24b_48k
+	    || EssenceType == ESS_AS02_PCM_24b_96k
+	    || EssenceType == ESS_AS02_JPEG_2000
+	    || EssenceType == ESS_AS02_TIMED_TEXT )
+    {
+      fprintf(stderr, "File is AS-02. Inspection in not supported by this command.\n");
     }
   else
     {

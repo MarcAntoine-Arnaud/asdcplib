@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Reader.cpp
-  \version $Id: h__02_Reader.cpp,v 1.11 2014/01/02 23:29:22 jhurst Exp $
+  \version $Id: h__02_Reader.cpp,v 1.12 2014/10/22 22:58:24 jhurst Exp $
   \brief   MXF file reader base class
 */
 
@@ -93,7 +93,8 @@ AS_02::MXF::AS02IndexReader::InitFromFile(const Kumu::FileReader& reader, const 
 	}
       else if ( i->BodySID != first_body_sid )
 	{
-	  DefaultLogSink().Error("RIP contains multipls BodySID identities.\n");
+	  DefaultLogSink().Debug("The index assembler is ignoring BodySID %d.\n", i->BodySID);
+	  continue;
 	}
 
       reader.Seek(i->ByteOffset);

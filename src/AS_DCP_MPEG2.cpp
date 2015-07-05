@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_MPEG2.cpp
-    \version $Id: AS_DCP_MPEG2.cpp,v 1.42 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: AS_DCP_MPEG2.cpp,v 1.43 2014/09/21 13:27:43 jhurst Exp $       
     \brief   AS-DCP library, MPEG2 essence reader and writer implementation
 */
 
@@ -237,7 +237,6 @@ ASDCP::MPEG2::MXFReader::h__Reader::FindFrameGOPStart(ui32_t FrameNum, ui32_t& K
 
   if ( ASDCP_FAILURE(m_IndexAccess.Lookup(FrameNum, TmpEntry)) )
     {
-      DefaultLogSink().Error("Frame value out of range: %u\n", FrameNum);
       return RESULT_RANGE;
     }
 
@@ -258,7 +257,6 @@ ASDCP::MPEG2::MXFReader::h__Reader::FrameType(ui32_t FrameNum, FrameType_t& type
 
   if ( ASDCP_FAILURE(m_IndexAccess.Lookup(FrameNum, TmpEntry)) )
     {
-      DefaultLogSink().Error("Frame value out of range: %u\n", FrameNum);
       return RESULT_RANGE;
     }
 

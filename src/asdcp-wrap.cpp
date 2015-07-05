@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2013, John Hurst
+Copyright (c) 2003-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-wrap.cpp
-    \version $Id: asdcp-wrap.cpp,v 1.15 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: asdcp-wrap.cpp,v 1.19 2015/02/23 21:57:05 jhurst Exp $
     \brief   AS-DCP file manipulation utility
 
   This program wraps d-cinema essence (picture, sound or text) into an AS-DCP
@@ -99,12 +99,21 @@ public:
   }
 
 //
+static void
+create_random_uuid(byte_t* uuidbuf)
+{
+  Kumu::UUID tmp_id;
+  GenRandomValue(tmp_id);
+  memcpy(uuidbuf, tmp_id.Value(), tmp_id.Size());
+}
+
+//
 void
 banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2003-2012 John Hurst\n\n\
+Copyright (c) 2003-2015 John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -129,6 +138,7 @@ Options:\n\
   -3                - Create a stereoscopic image file. Expects two\n\
                       directories of JP2K codestreams (directories must have\n\
                       an equal number of frames; the left eye is first)\n\
+  -A <UL>           - Set DataEssenceCoding UL value in an Aux Data file\n\
   -C <UL>           - Set ChannelAssignment UL value in a PCM file\n\
   -h | -help        - Show help\n\
   -V                - Show version information\n\
@@ -139,6 +149,8 @@ Options:\n\
   -M                - Do not create HMAC values when writing\n\
   -m <expr>         - Write MCA labels using <expr>.  Example:\n\
                         51(L,R,C,LFE,Ls,Rs,),HI,VIN\n\
+                        Note: The symbol '-' may be used for an unlabeled\n\
+                              channel, but not within a soundfield.\n\
   -a <UUID>         - Specify the Asset ID of the file\n\
   -b <buffer-size>  - Specify size in bytes of picture frame buffer\n\
                       Defaults to 4,194,304 (4MB)\n\
@@ -187,9 +199,6 @@ decode_channel_fmt(const std::string& label_name)
   else if ( label_name == "7.1DS" )
     return PCM::CF_CFG_5;
 
-  else if ( label_name == "MCA" )
-    return PCM::CF_CFG_6;
-
   fprintf(stderr, "Error decoding channel format string: %s\n", label_name.c_str());
   fprintf(stderr, "Expecting '5.1', '6.1', '7.1', '7.1DS' or 'WTF'\n");
   return PCM::CF_NONE;
@@ -213,6 +222,7 @@ public:
   bool   version_flag;   // true if the version display option was selected
   bool   help_flag;      // true if the help display option was selected
   bool   stereo_image_flag; // if true, expect stereoscopic JP2K input (left eye first)
+  bool   write_partial_pcm_flag; // if true, write the last frame of PCM input even when it is incomplete
   ui32_t start_frame;    // frame number to begin processing
   ui32_t duration;       // number of frames to be processed
   bool   use_smpte_labels; // if true, SMPTE UL values will be written instead of MXF Interop values
@@ -229,6 +239,7 @@ public:
   Kumu::PathList_t filenames;  // list of filenames to be processed
   UL channel_assignment;
   UL picture_coding;
+  UL aux_data_coding;
   bool dolby_atmos_sync_flag;  // if true, insert a Dolby Atmos Synchronization channel.
   ui32_t ffoa;  /// first frame of action for atmos wrapping
   ui32_t max_channel_count; /// max channel count for atmos wrapping
@@ -281,7 +292,7 @@ public:
     encrypt_header_flag(true), write_hmac(true),
     verbose_flag(false), fb_dump_size(0),
     no_write_flag(false), version_flag(false), help_flag(false), stereo_image_flag(false),
-    start_frame(0),
+    write_partial_pcm_flag(false), start_frame(0),
     duration(0xffffffff), use_smpte_labels(false), j2c_pedantic(true),
     fb_size(FRAME_BUFFER_SIZE),
     channel_fmt(PCM::CF_NONE),
@@ -309,6 +320,15 @@ public:
 	    switch ( argv[i][1] )
 	      {
 	      case '3': stereo_image_flag = true; break;
+
+	      case 'A':
+		TEST_EXTRA_ARG(i, 'A');
+		if ( ! aux_data_coding.DecodeHex(argv[i]) )
+		  {
+		    fprintf(stderr, "Error decoding UL value: %s\n", argv[i]);
+		    return;
+		  }
+		break;
 
 	      case 'a':
 		asset_id_flag = true;
@@ -356,6 +376,7 @@ public:
 		start_frame = abs(atoi(argv[i]));
 		break;
 
+	      case 'g': write_partial_pcm_flag = true; break;
 	      case 'h': help_flag = true; break;
 
 	      case 'j': key_id_flag = true;
@@ -515,9 +536,13 @@ write_MPEG2_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -680,9 +705,13 @@ write_JP2K_S_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -815,9 +844,13 @@ write_JP2K_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -955,9 +988,13 @@ write_PCM_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -1035,8 +1072,12 @@ write_PCM_file(CommandOptions& Options)
 		{
 		  fprintf(stderr, "WARNING: Last frame read was short, PCM input is possibly not frame aligned.\n");
 		  fprintf(stderr, "Expecting %u bytes, got %u.\n", FrameBuffer.Capacity(), FrameBuffer.Size());
-		  result = RESULT_ENDOFFILE;
-		  continue;
+
+		  if ( Options.write_partial_pcm_flag )
+		    {
+		      result = RESULT_ENDOFFILE;
+		      continue;
+		    }
 		}
 
 	      if ( Options.verbose_flag )
@@ -1123,9 +1164,13 @@ write_PCM_with_ATMOS_sync_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -1160,8 +1205,12 @@ write_PCM_with_ATMOS_sync_file(CommandOptions& Options)
 		{
 		  fprintf(stderr, "WARNING: Last frame read was short, PCM input is possibly not frame aligned.\n");
 		  fprintf(stderr, "Expecting %u bytes, got %u.\n", FrameBuffer.Capacity(), FrameBuffer.Size());
-		  result = RESULT_ENDOFFILE;
-		  continue;
+
+		  if ( Options.write_partial_pcm_flag )
+		    {
+		      result = RESULT_ENDOFFILE;
+		      continue;
+		    }
 		}
 
         if ( Options.verbose_flag )
@@ -1246,9 +1295,13 @@ write_timed_text_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -1366,9 +1419,13 @@ write_dolby_atmos_file(CommandOptions& Options)
 	  Info.EncryptedEssence = true;
 
 	  if ( Options.key_id_flag )
-	    memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
 	  else
-	    RNG.FillRandom(Info.CryptographicKeyID, UUIDlen);
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
 
 	  Context = new AESEncContext;
 	  result = Context->InitKey(Options.key_value);
@@ -1386,6 +1443,123 @@ write_dolby_atmos_file(CommandOptions& Options)
 
     if ( ASDCP_SUCCESS(result) )
       result = Writer.OpenWrite(Options.out_file, Info, ADesc);
+  }
+
+  if ( ASDCP_SUCCESS(result) )
+  {
+    ui32_t duration = 0;
+    result = Parser.Reset();
+
+    while ( ASDCP_SUCCESS(result) && duration++ < Options.duration )
+	{
+      result = Parser.ReadFrame(FrameBuffer);
+
+      if ( ASDCP_SUCCESS(result) )
+      {
+        if ( Options.verbose_flag )
+          FrameBuffer.Dump(stderr, Options.fb_dump_size);
+
+        if ( Options.encrypt_header_flag )
+          FrameBuffer.PlaintextOffset(0);
+      }
+
+      if ( ASDCP_SUCCESS(result) && ! Options.no_write_flag )
+      {
+        result = Writer.WriteFrame(FrameBuffer, Context, HMAC);
+
+        // The Writer class will forward the last block of ciphertext
+        // to the encryption context for use as the IV for the next
+        // frame. If you want to use non-sequitur IV values, un-comment
+        // the following  line of code.
+        // if ( ASDCP_SUCCESS(result) && Options.key_flag )
+        //   Context->SetIVec(RNG.FillRandom(IV_buf, CBC_BLOCK_SIZE));
+      }
+	}
+
+    if ( result == RESULT_ENDOFFILE )
+      result = RESULT_OK;
+  }
+
+  if ( ASDCP_SUCCESS(result) && ! Options.no_write_flag )
+    result = Writer.Finalize();
+
+  return result;
+}
+
+// Write one or more plaintext Aux Data (ST 429-14) bytestreams to a plaintext ASDCP file
+// Write one or more plaintext Aux Data (ST 429-14) bytestreams to a ciphertext ASDCP file
+//
+Result_t
+write_aux_data_file(CommandOptions& Options)
+{
+  AESEncContext*          Context = 0;
+  HMACContext*            HMAC = 0;
+  DCData::MXFWriter       Writer;
+  DCData::FrameBuffer     FrameBuffer(Options.fb_size);
+  DCData::DCDataDescriptor DDesc;
+  DCData::SequenceParser  Parser;
+  byte_t                  IV_buf[CBC_BLOCK_SIZE];
+  Kumu::FortunaRNG        RNG;
+
+  // set up essence parser
+  Result_t result = Parser.OpenRead(Options.filenames.front());
+
+  // set up MXF writer
+  if ( ASDCP_SUCCESS(result) )
+  {
+    Parser.FillDCDataDescriptor(DDesc);
+    memcpy(DDesc.DataEssenceCoding, Options.aux_data_coding.Value(), Options.aux_data_coding.Size());
+    DDesc.EditRate = Options.PictureRate();
+
+    if ( Options.verbose_flag )
+	{
+	  fprintf(stderr, "Aux Data\n");
+	  fprintf(stderr, "Frame Buffer size: %u\n", Options.fb_size);
+	  DCData::DCDataDescriptorDump(DDesc);
+	}
+  }
+
+  if ( ASDCP_SUCCESS(result) && ! Options.no_write_flag )
+  {
+    WriterInfo Info = s_MyInfo;  // fill in your favorite identifiers here
+    if ( Options.asset_id_flag )
+      memcpy(Info.AssetUUID, Options.asset_id_value, UUIDlen);
+    else
+      Kumu::GenRandomUUID(Info.AssetUUID);
+
+    Info.LabelSetType = LS_MXF_SMPTE;
+
+      // configure encryption
+    if( Options.key_flag )
+	{
+	  Kumu::GenRandomUUID(Info.ContextID);
+	  Info.EncryptedEssence = true;
+
+	  if ( Options.key_id_flag )
+	    {
+	      memcpy(Info.CryptographicKeyID, Options.key_id_value, UUIDlen);
+	    }
+	  else
+	    {
+	      create_random_uuid(Info.CryptographicKeyID);
+	    }
+
+	  Context = new AESEncContext;
+	  result = Context->InitKey(Options.key_value);
+
+	  if ( ASDCP_SUCCESS(result) )
+	    result = Context->SetIVec(RNG.FillRandom(IV_buf, CBC_BLOCK_SIZE));
+
+	  if ( ASDCP_SUCCESS(result) && Options.write_hmac )
+      {
+        Info.UsesHMAC = true;
+        HMAC = new HMACContext;
+        result = HMAC->InitKey(Options.key_value, Info.LabelSetType);
+      }
+	}
+
+    if ( ASDCP_SUCCESS(result) )
+      result = Writer.OpenWrite(Options.out_file, Info, DDesc);
   }
 
   if ( ASDCP_SUCCESS(result) )
@@ -1486,22 +1660,35 @@ main(int argc, const char** argv)
 
 	case ESS_PCM_24b_48k:
 	case ESS_PCM_24b_96k:
-      if ( Options.dolby_atmos_sync_flag )
-      {
-        result = write_PCM_with_ATMOS_sync_file(Options);
-      }
-      else
-      {
-        result = write_PCM_file(Options);
-      }
+	  if ( Options.dolby_atmos_sync_flag )
+	    {
+	      result = write_PCM_with_ATMOS_sync_file(Options);
+	    }
+	  else
+	    {
+	      result = write_PCM_file(Options);
+	    }
 	  break;
-
+	  
 	case ESS_TIMED_TEXT:
 	  result = write_timed_text_file(Options);
 	  break;
 
 	case ESS_DCDATA_DOLBY_ATMOS:
 	  result = write_dolby_atmos_file(Options);
+	  break;
+
+	case ESS_DCDATA_UNKNOWN:
+	  if ( ! Options.aux_data_coding.HasValue() )
+	    {
+	      fprintf(stderr, "Option \"-A <UL>\" is required for Aux Data essence.\n",
+		      Options.filenames.front().c_str());
+	      return 3;
+	    }
+	  else
+	    {
+	      result = write_aux_data_file(Options);
+	    }
 	  break;
 
 	default:

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2013, John Hurst
+Copyright (c) 2005-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.h
-    \version $Id: MXF.h,v 1.52 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: MXF.h,v 1.54 2014/09/21 13:27:43 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -405,6 +405,10 @@ namespace ASDCP
 	  SourcePackage*   GetSourcePackage();
 	};
 
+      // Searches the header object and returns the edit rate based on the contents of the
+      // File Package items.  Logs an error message and returns false if anthing goes wrong.
+      bool GetEditRateFromFP(ASDCP::MXF::OP1aHeader& header, ASDCP::Rational& edit_rate);
+
       //
       class OPAtomIndexFooter : public Partition
 	{
@@ -459,7 +463,18 @@ namespace ASDCP
 	}
       };
 
-      typedef std::map<const std::string, const UL, ci_comp> mca_label_map_t;
+      struct label_traits
+      {
+        const std::string tag_name;
+	const bool requires_prefix;
+	const UL ul;
+
+      label_traits(const std::string& tag_name, const bool requires_prefix, const UL ul) : 
+	tag_name(tag_name), requires_prefix(requires_prefix), ul(ul) { }
+      };
+
+      typedef std::map<const std::string, const label_traits, ci_comp> mca_label_map_t;
+
       bool decode_mca_string(const std::string& s, const mca_label_map_t& labels,
 			     const Dictionary*& dict, const std::string& language, InterchangeObject_list_t&, ui32_t&);
 
@@ -477,7 +492,7 @@ namespace ASDCP
 	  
 	public:
 	  ASDCP_MCAConfigParser(const Dictionary*&);
-	  bool DecodeString(const std::string& s, const std::string& language = "en");
+	  bool DecodeString(const std::string& s, const std::string& language = "en-US");
 
 	  // Valid only after a successful call to DecodeString
 	  ui32_t ChannelCount() const;

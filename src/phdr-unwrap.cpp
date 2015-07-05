@@ -1,6 +1,5 @@
 /*
-Copyright (c) 2011-2012, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
-John Hurst
+Copyright (c) 2011-2014, John Hurst
 
 All rights reserved.
 
@@ -26,23 +25,15 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-/*! \file    as-02-unwrap.cpp
-    \version $Id: as-02-unwrap.cpp,v 1.5 2013/06/12 01:16:16 jhurst Exp $       
-    \brief   AS-02 file manipulation utility
+/*! \file    phdr-unwrap.cpp
+    \version $Id: phdr-unwrap.cpp,v 1.4 2015/02/19 22:42:18 mschroffel Exp $       
+    \brief   prototype unwrapping for HDR images in AS-02
 
-  This program extracts picture and sound from AS-02 files.
-
-  For more information about AS-02, please refer to the header file AS_02.h
-  For more information about asdcplib, please refer to the header file AS_DCP.h
+  This program extracts picture (P-HDR picture) from an AS-02 MXF file.
 */
 
 #include <KM_fileio.h>
-#include <AS_02.h>
-#include <WavFileWriter.h>
-
-namespace ASDCP {
-  Result_t MD_to_PCM_ADesc(ASDCP::MXF::WaveAudioDescriptor* ADescObj, ASDCP::PCM::AudioDescriptor& ADesc);
-}
+#include <AS_02_PHDR.h>
 
 using namespace ASDCP;
 
@@ -69,7 +60,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
+Copyright (c) 2011-2015, John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -83,17 +74,13 @@ usage(FILE* stream = stdout)
   fprintf(stream, "\
 USAGE: %s [-h|-help] [-V]\n\
 \n\
-       %s [-1|-2] [-b <buffer-size>] [-d <duration>]\n\
-       [-f <starting-frame>] [-m] [-p <frame-rate>] [-R] [-s <size>] [-v] [-W]\n\
+       %s [-b <buffer-size>] [-d <duration>]\n\
+       [-f <starting-frame>] [-m] [-R] [-s <size>] [-v] [-W]\n\
        [-w] <input-file> [<file-prefix>]\n\n",
 	  PROGRAM_NAME, PROGRAM_NAME, PROGRAM_NAME);
 
   fprintf(stream, "\
 Options:\n\
-  -1                - Split Wave essence to mono WAV files during extract.\n\
-                      Default is multichannel WAV\n\
-  -2                - Split Wave essence to stereo WAV files during extract.\n\
-                      Default is multichannel WAV\n\
   -b <buffer-size>  - Specify size in bytes of picture frame buffer\n\
                       Defaults to 4,194,304 (4MB)\n\
   -d <duration>     - Number of frames to process, default all\n\
@@ -107,8 +94,6 @@ Options:\n\
   -W                - Read input file only, do not write destination file\n\
   -w <width>        - Width of numeric element in a series of frame file names\n\
                       (default 6)\n\
-  -z                - Fail if j2c inputs have unequal parameters (default)\n\
-  -Z                - Ignore unequal parameters in j2c inputs\n\
 \n\
   NOTES: o There is no option grouping, all options must be distinct arguments.\n\
          o All option arguments must be separated from the option by whitespace.\n\n");
@@ -123,8 +108,6 @@ public:
   bool   error_flag;     // true if the given options are in error or not complete
   bool   key_flag;       // true if an encryption key was given
   bool   read_hmac;      // true if HMAC values are to be validated
-  bool   split_wav;      // true if PCM is to be extracted to stereo WAV files
-  bool   mono_wav;       // true if PCM is to be extracted to mono WAV files
   bool   verbose_flag;   // true if the verbose option was selected
   ui32_t fb_dump_size;   // number of bytes of frame buffer to dump
   bool   no_write_flag;  // true if no output files are to be written
@@ -135,24 +118,20 @@ public:
   ui32_t start_frame;    // frame number to begin processing
   ui32_t duration;       // number of frames to be processed
   bool   duration_flag;  // true if duration argument given
-  bool   j2c_pedantic;   // passed to JP2K::SequenceParser::OpenRead
-  ui32_t picture_rate;   // fps of picture when wrapping PCM
   ui32_t fb_size;        // size of picture frame buffer
-  Rational edit_rate;    // frame buffer size for reading clip-wrapped PCM
   const char* file_prefix; // filename pre for files written by the extract mode
   byte_t key_value[KeyLen];  // value of given encryption key (when key_flag is true)
   byte_t key_id_value[UUIDlen];// value of given key ID (when key_id_flag is true)
-  PCM::ChannelFormat_t channel_fmt; // audio channel arrangement
   const char* input_filename;
   std::string prefix_buffer;
 
   //
   CommandOptions(int argc, const char** argv) :
-    error_flag(true), key_flag(false), read_hmac(false), split_wav(false),
-    mono_wav(false), verbose_flag(false), fb_dump_size(0), no_write_flag(false),
+    error_flag(true), key_flag(false), read_hmac(false), verbose_flag(false),
+    fb_dump_size(0), no_write_flag(false),
     version_flag(false), help_flag(false), number_width(6),
-    start_frame(0), duration(0xffffffff), duration_flag(false), j2c_pedantic(true),
-    picture_rate(24), fb_size(FRAME_BUFFER_SIZE), file_prefix(0),
+    start_frame(0), duration(0xffffffff), duration_flag(false),
+    fb_size(FRAME_BUFFER_SIZE), file_prefix(0),
     input_filename(0)
   {
     memset(key_value, 0, KeyLen);
@@ -173,9 +152,6 @@ public:
 	  {
 	    switch ( argv[i][1] )
 	      {
-	      case '1': mono_wav = true; break;
-	      case '2': split_wav = true; break;
-
 	      case 'b':
 		TEST_EXTRA_ARG(i, 'b');
 		fb_size = abs(atoi(argv[i]));
@@ -199,11 +175,6 @@ public:
 	      case 'h': help_flag = true; break;
 	      case 'm': read_hmac = true; break;
 
-	      case 'p':
-		TEST_EXTRA_ARG(i, 'p');
-		picture_rate = abs(atoi(argv[i]));
-		break;
-
 	      case 's':
 		TEST_EXTRA_ARG(i, 's');
 		fb_dump_size = abs(atoi(argv[i]));
@@ -217,9 +188,6 @@ public:
 		TEST_EXTRA_ARG(i, 'w');
 		number_width = abs(atoi(argv[i]));
 		break;
-
-	      case 'Z': j2c_pedantic = false; break;
-	      case 'z': j2c_pedantic = true; break;
 
 	      default:
 		fprintf(stderr, "Unrecognized option: %s\n", argv[i]);
@@ -271,20 +239,23 @@ public:
 // JPEG 2000 essence
 
 
-// Read one or more plaintext JPEG 2000 codestreams from a plaintext ASDCP file
-// Read one or more plaintext JPEG 2000 codestreams from a ciphertext ASDCP file
-// Read one or more ciphertext JPEG 2000 codestreams from a ciphertext ASDCP file
+// Read one or more plaintext JPEG 2000 codestreams from a plaintext P-HDR file
+// Read one or more plaintext JPEG 2000 codestreams from a ciphertext P-HDR file
+// Read one or more ciphertext JPEG 2000 codestreams from a ciphertext P-HDR file
 //
 Result_t
 read_JP2K_file(CommandOptions& Options)
 {
   AESDecContext*     Context = 0;
   HMACContext*       HMAC = 0;
-  AS_02::JP2K::MXFReader    Reader;
-  JP2K::FrameBuffer  FrameBuffer(Options.fb_size);
+  AS_02::PHDR::MXFReader    Reader;
+  AS_02::PHDR::FrameBuffer  FrameBuffer(Options.fb_size);
   ui32_t             frame_count = 0;
 
-  Result_t result = Reader.OpenRead(Options.input_filename);
+  std::string PHDR_master_metadata; // todo: write to a file?
+
+  Result_t result = Reader.OpenRead(Options.input_filename, PHDR_master_metadata);
+  fprintf(stderr, "PHDR_master_metadata size=%zd\n", PHDR_master_metadata.size());
 
   if ( ASDCP_SUCCESS(result) )
     {
@@ -376,161 +347,39 @@ read_JP2K_file(CommandOptions& Options)
     {
       result = Reader.ReadFrame(i, FrameBuffer, Context, HMAC);
 
-      if ( ASDCP_SUCCESS(result) )
+      char filename[1024];
+      snprintf(filename, 1024, name_format, Options.file_prefix, i);
+
+      if ( ASDCP_SUCCESS(result) && Options.verbose_flag )
+	{
+	  printf("Frame %d, %d bytes", i, FrameBuffer.Size());
+
+	  if ( ! Options.no_write_flag )
+	    {
+	      printf(" -> %s", filename);
+	    }
+
+	  printf("\n");
+	}
+
+      if ( ASDCP_SUCCESS(result)  && ( ! Options.no_write_flag ) )
 	{
 	  Kumu::FileWriter OutFile;
-	  char filename[256];
 	  ui32_t write_count;
-	  snprintf(filename, 256, name_format, Options.file_prefix, i);
 	  result = OutFile.OpenWrite(filename);
 
 	  if ( ASDCP_SUCCESS(result) )
 	    result = OutFile.Write(FrameBuffer.Data(), FrameBuffer.Size(), &write_count);
 
-	  if ( Options.verbose_flag )
-	    FrameBuffer.Dump(stderr, Options.fb_dump_size);
+	  if ( ASDCP_SUCCESS(result) && Options.verbose_flag )
+	    {
+	      FrameBuffer.Dump(stderr, Options.fb_dump_size);
+	    }
 	}
     }
 
   return result;
 }
-
-//------------------------------------------------------------------------------------------
-// PCM essence
-
-// Read one or more plaintext PCM audio streams from a plaintext ASDCP file
-// Read one or more plaintext PCM audio streams from a ciphertext ASDCP file
-// Read one or more ciphertext PCM audio streams from a ciphertext ASDCP file
-//
-Result_t
-read_PCM_file(CommandOptions& Options)
-{
-  AESDecContext*     Context = 0;
-  HMACContext*       HMAC = 0;
-  AS_02::PCM::MXFReader     Reader;
-  PCM::FrameBuffer   FrameBuffer;
-  WavFileWriter      OutWave;
-  ui32_t last_frame = 0;
-  ASDCP::MXF::WaveAudioDescriptor *wave_descriptor = 0;
-
-  if ( Options.edit_rate == Rational(0,0) ) // todo, make this available to the CLI
-    {
-      Options.edit_rate = EditRate_24;
-    }
-
-  Result_t result = Reader.OpenRead(Options.input_filename, Options.edit_rate);
-
-  if ( ASDCP_SUCCESS(result) )
-    {
-      if ( Options.verbose_flag )
-	{
-	  fprintf(stderr, "Frame Buffer size: %u\n", Options.fb_size);
-	}
-
-      result = Reader.OP1aHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_WaveAudioDescriptor),
-						     reinterpret_cast<MXF::InterchangeObject**>(&wave_descriptor));
-
-      if ( KM_SUCCESS(result) )
-	{
-	  assert(wave_descriptor);
-	  last_frame = wave_descriptor->ContainerDuration;
-
-	  if ( Options.verbose_flag )
-	    {
-	      wave_descriptor->Dump();
-	    }
-	}
-      else
-	{
-	  fprintf(stderr, "File does not contain an essence descriptor.\n");
-	  last_frame = Reader.AS02IndexReader().GetDuration();
-	}
-
-      if ( last_frame == 0 )
-	{
-	  fprintf(stderr, "Unable to determine file duration.\n");
-	  return RESULT_FAIL;
-	}
-
-      FrameBuffer.Capacity(AS_02::MXF::CalcFrameBufferSize(*wave_descriptor, Options.edit_rate));
-
-      if ( Options.verbose_flag )
-	{
-	  wave_descriptor->Dump();
-	}
-    }
-
-  if ( ASDCP_SUCCESS(result) )
-    {
-      if ( Options.duration > 0 && Options.duration < last_frame )
-	last_frame = Options.duration;
-
-      if ( Options.start_frame > 0 )
-	{
-	  if ( Options.start_frame > last_frame )
-	    {
-	      fprintf(stderr, "Start value greater than file duration.\n");
-	      return RESULT_FAIL;
-	    }
-
-	  last_frame = Kumu::xmin(Options.start_frame + last_frame, last_frame);
-	}
-
-      last_frame = last_frame - Options.start_frame;
-
-      PCM::AudioDescriptor ADesc;
-
-      result = MD_to_PCM_ADesc(wave_descriptor, ADesc);
-
-      if ( ASDCP_SUCCESS(result) )
-	{
-	  ADesc.ContainerDuration = last_frame;
-	  ADesc.EditRate = Options.edit_rate;
-
-	  result = OutWave.OpenWrite(ADesc, Options.file_prefix,
-				     ( Options.split_wav ? WavFileWriter::ST_STEREO : 
-				       ( Options.mono_wav ? WavFileWriter::ST_MONO : WavFileWriter::ST_NONE ) ));
-	}
-    }
-
-  if ( ASDCP_SUCCESS(result) && Options.key_flag )
-    {
-      Context = new AESDecContext;
-      result = Context->InitKey(Options.key_value);
-
-      if ( ASDCP_SUCCESS(result) && Options.read_hmac )
-	{
-	  WriterInfo Info;
-	  Reader.FillWriterInfo(Info);
-
-	  if ( Info.UsesHMAC )
-	    {
-	      HMAC = new HMACContext;
-	      result = HMAC->InitKey(Options.key_value, Info.LabelSetType);
-	    }
-	  else
-	    {
-	      fputs("File does not contain HMAC values, ignoring -m option.\n", stderr);
-	    }
-	}
-    }
-
-  for ( ui32_t i = Options.start_frame; ASDCP_SUCCESS(result) && i < last_frame; i++ )
-    {
-      result = Reader.ReadFrame(i, FrameBuffer, Context, HMAC);
-
-      if ( ASDCP_SUCCESS(result) )
-	{
-	  if ( Options.verbose_flag )
-	    FrameBuffer.Dump(stderr, Options.fb_dump_size);
-
-	  result = OutWave.WriteFrame(FrameBuffer);
-	}
-    }
-
-  return result;
-}
-
 
 //
 int
@@ -561,17 +410,12 @@ main(int argc, const char** argv)
     {
       switch ( EssenceType )
 	{
-	case ESS_JPEG_2000:
+	case ESS_AS02_JPEG_2000:
 	  result = read_JP2K_file(Options);
 	  break;
 
-	case ESS_PCM_24b_48k:
-	case ESS_PCM_24b_96k:
-	  result = read_PCM_file(Options);
-	  break;
-
 	default:
-	  fprintf(stderr, "%s: Unknown file type, not ASDCP essence.\n", Options.input_filename);
+	  fprintf(stderr, "%s: Unknown file type, not P-HDR essence.\n", Options.input_filename);
 	  return 5;
 	}
     }
@@ -580,11 +424,7 @@ main(int argc, const char** argv)
     {
       fputs("Program stopped on error.\n", stderr);
 
-      if ( result == RESULT_SFORMAT )
-	{
-	  fputs("Use option '-3' to force stereoscopic mode.\n", stderr);
-	}
-      else if ( result != RESULT_FAIL )
+      if ( result != RESULT_FAIL )
 	{
 	  fputs(result, stderr);
 	  fputc('\n', stderr);
@@ -598,5 +438,5 @@ main(int argc, const char** argv)
 
 
 //
-// end as-02-unwrap.cpp
+// end phdr-unwrap.cpp
 //

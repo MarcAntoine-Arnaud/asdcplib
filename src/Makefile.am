@@ -1,6 +1,6 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 #
-# $Id: Makefile.am,v 1.74 2014/01/03 00:55:45 jhurst Exp $
+# $Id: Makefile.am,v 1.82 2015/01/22 21:05:58 jhurst Exp $
 #
 # Copyright (c) 2007-2013 John Hurst. All rights reserved.
 #
@@ -39,6 +39,8 @@ if ENABLE_RANDOM_UUID
 AM_CPPFLAGS += -DCONFIG_RANDOM_UUID
 endif
 
+AM_CPPFLAGS += -g
+
 # list of all the header files that should be installed
 include_HEADERS = \
 	KM_error.h \
@@ -64,13 +66,22 @@ include_HEADERS += \
 	MXF.h \
 	Wav.h \
 	PCMParserList.h \
-	AtmosSyncChannel_Generator.h
+	AtmosSyncChannel_Mixer.h \
+	AtmosSyncChannel_Generator.h \
+	PCMDataProviders.h \
+	SyncCommon.h \
+	SyncEncoder.h \
+	UUIDInformation.h 
 
-nodist_include_HEADERS = TimedText_Transform.h
+
 endif
 
 if USE_AS_02
 include_HEADERS		+= AS_02.h
+endif
+
+if USE_PHDR
+include_HEADERS		+= AS_02_PHDR.h
 endif
 
 # list of the libraries to build and install
@@ -79,6 +90,10 @@ lib_LTLIBRARIES = libkumu.la libasdcp.la
 
 if USE_AS_02
 lib_LTLIBRARIES		+= libas02.la
+endif
+
+if USE_PHDR
+lib_LTLIBRARIES		+= libphdr.la
 endif
 
 # sources for kumu library
@@ -109,12 +124,8 @@ libasdcp_la_SOURCES = MPEG2_Parser.cpp MPEG.cpp JP2K_Codestream_Parser.cpp \
 	AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
 	PCMDataProviders.cpp PCMDataProviders.h \
 	SyncEncoder.c SyncEncoder.h SyncCommon.h CRC16.c CRC16.h \
-	UUIDInformation.c UUIDInformation.h
+	UUIDInformation.c UUIDInformation.h 
 
-
-if DEV_HEADERS
-nodist_libasdcp_la_SOURCES += TimedText_Transform.h TimedText_Transform.cpp
-endif
 
 libasdcp_la_LDFLAGS = -release @VERSION@
 # additional libraries to link against for a library
@@ -129,11 +140,26 @@ libas02_la_SOURCES	= \
 	h__02_Reader.cpp \
 	h__02_Writer.cpp \
 	AS_02_JP2K.cpp \
-	AS_02_PCM.cpp
+	AS_02_PCM.cpp \
+	ST2052_TextParser.cpp \
+	AS_02_TimedText.cpp
 
 libas02_la_LDFLAGS = -release @VERSION@
 libas02_la_LIBADD = libasdcp.la libkumu.la
 libas02_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
+endif
+
+
+if USE_PHDR
+# sources for PHDR library
+libphdr_la_SOURCES	= \
+	AS_02_PHDR.h \
+	PHDR_Sequence_Parser.cpp \
+	AS_02_PHDR.cpp
+
+libphdr_la_LDFLAGS = -release @VERSION@
+libphdr_la_LIBADD = libasdcp.la libkumu.la
+libphdr_la_CPPFLAGS = -DASDCP_PLATFORM=\"@host@\"
 endif
 
 # Python extension
@@ -191,53 +217,66 @@ bin_PROGRAMS += \
 	as-02-unwrap
 endif
 
+if USE_PHDR
+bin_PROGRAMS += \
+	phdr-wrap \
+	phdr-unwrap
+endif
 
 # sources and linkage for CLI utilities
 asdcp_test_SOURCES = asdcp-test.cpp
-asdcp_test_LDADD = libasdcp.la
+asdcp_test_LDADD = libasdcp.la libkumu.la
 
 asdcp_wrap_SOURCES = asdcp-wrap.cpp
-asdcp_wrap_LDADD = libasdcp.la
+asdcp_wrap_LDADD = libasdcp.la libkumu.la
 
 asdcp_unwrap_SOURCES = asdcp-unwrap.cpp
-asdcp_unwrap_LDADD = libasdcp.la
+asdcp_unwrap_LDADD = libasdcp.la libkumu.la
 
 asdcp_util_SOURCES = asdcp-util.cpp
-asdcp_util_LDADD = libasdcp.la
+asdcp_util_LDADD = libasdcp.la libkumu.la
 
 asdcp_info_SOURCES = asdcp-info.cpp
-asdcp_info_LDADD = libasdcp.la
+asdcp_info_LDADD = libasdcp.la libkumu.la
 
 kmfilegen_SOURCES = kmfilegen.cpp
-kmfilegen_LDADD = libkumu.la
+kmfilegen_LDADD = libkumu.la 
 
 kmrandgen_SOURCES = kmrandgen.cpp
-kmrandgen_LDADD = libkumu.la
+kmrandgen_LDADD = libkumu.la 
 
 kmuuidgen_SOURCES = kmuuidgen.cpp
-kmuuidgen_LDADD = libkumu.la
+kmuuidgen_LDADD = libkumu.la 
 
 blackwave_SOURCES = blackwave.cpp
-blackwave_LDADD = libasdcp.la
+blackwave_LDADD = libasdcp.la  libkumu.la
 
 klvwalk_SOURCES = klvwalk.cpp
-klvwalk_LDADD = libasdcp.la
+klvwalk_LDADD = libasdcp.la libkumu.la
 
 wavesplit_SOURCES = wavesplit.cpp
-wavesplit_LDADD = libasdcp.la
+wavesplit_LDADD = libasdcp.la libkumu.la
 
 j2c_test_SOURCES = j2c-test.cpp
-j2c_test_LDADD = libasdcp.la
+j2c_test_LDADD = libasdcp.la libkumu.la
 
 klvsplit_SOURCES = klvsplit.cpp
-klvsplit_LDADD = libasdcp.la
+klvsplit_LDADD = libasdcp.la libkumu.la
 
 if USE_AS_02
 as_02_wrap_SOURCES = as-02-wrap.cpp
-as_02_wrap_LDADD = libas02.la
+as_02_wrap_LDADD = libas02.la libasdcp.la libkumu.la
 
 as_02_unwrap_SOURCES = as-02-unwrap.cpp
-as_02_unwrap_LDADD = libas02.la
+as_02_unwrap_LDADD = libas02.la libasdcp.la libkumu.la
+endif
+
+if USE_PHDR
+phdr_wrap_SOURCES = phdr-wrap.cpp
+phdr_wrap_LDADD = libphdr.la libas02.la libasdcp.la libkumu.la
+
+phdr_unwrap_SOURCES = phdr-unwrap.cpp
+phdr_unwrap_LDADD = libphdr.la libas02.la libasdcp.la libkumu.la
 endif
 
 # list of programs that need to be compiled for use in test suite
@@ -259,10 +298,10 @@ fips_186_rng_test_SOURCES = fips-186-rng-test.cpp
 fips_186_rng_test_LDADD = libasdcp.la
 
 asdcp_version_SOURCES = asdcp-version.cpp
-asdcp_version_LDADD = libkumu.la
+asdcp_version_LDADD = libkumu.la 
 
 if DEV_HEADERS
-nodist_tt_xform_SOURCES = tt-xform.cpp
+nodist_tt_xform_SOURCES = tt-xform.cpp TimedText_Transform.h
 tt_xform_LDADD = libasdcp.la
 endif
 

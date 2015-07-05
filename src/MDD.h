@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2006-2013, John Hurst
+Copyright (c) 2006-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MDD.[h|cpp]
-    \version $Id: MDD.h,v 1.32 2013/12/15 23:34:13 jhurst Exp $
+    \version $Id: MDD.h,v 1.35 2015/01/22 21:05:58 jhurst Exp $
     \brief   MXF Metadata Dictionary
 */
 
@@ -406,6 +406,16 @@ namespace ASDCP {
 	MDD_AlternativeCenterCuts_4x3, // 368
 	MDD_AlternativeCenterCuts_14x9, // 369
 	MDD_WAVWrappingClip, // 370
+	MDD_DBOXMotionCodePrimaryStream, // 371
+	MDD_DBOXMotionCodeSecondaryStream, // 372
+	MDD_ContainerConstraintSubDescriptor, // 373
+	MDD_PHDRImageMetadataWrappingFrame, // 374
+	MDD_PHDRImageMetadataItem, // 375
+	MDD_PHDRMetadataTrackSubDescriptor, // 376
+	MDD_PHDRMetadataTrackSubDescriptor_DataDefinition, // 377
+	MDD_PHDRMetadataTrackSubDescriptor_SourceTrackID, // 378
+	MDD_PHDRMetadataTrackSubDescriptor_SimplePayloadSID, // 379
+	MDD_JPEG2000PictureSubDescriptor_J2CLayout, // 380
         MDD_Max
     }; // enum MDD_t
 

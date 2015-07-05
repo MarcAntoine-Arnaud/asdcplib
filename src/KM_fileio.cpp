@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2012, John Hurst
+Copyright (c) 2004-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_fileio.cpp
-    \version $Id: KM_fileio.cpp,v 1.33 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: KM_fileio.cpp,v 1.38 2015/02/19 19:06:56 jhurst Exp $
     \brief   portable file i/o
   */
 
@@ -235,12 +235,22 @@ Kumu::PathsAreEquivalent(const std::string& lhs, const std::string& rhs)
 
 //
 Kumu::PathCompList_t&
-Kumu::PathToComponents(const std::string& Path, PathCompList_t& CList, char separator)
+Kumu::PathToComponents(const std::string& path, PathCompList_t& component_list, char separator)
 {
   std::string s;
   s = separator;
-  CList = km_token_split(Path, s);
-  return CList;
+  PathCompList_t tmp_list = km_token_split(path, std::string(s));
+  PathCompList_t::const_iterator i;
+
+  for ( i = tmp_list.begin(); i != tmp_list.end(); ++i )
+    {
+      if ( ! i->empty() )
+	{
+	  component_list.push_back(*i);
+	}
+    }
+
+  return component_list;
 }
 
 //
@@ -691,7 +701,7 @@ Kumu::FileReader::OpenRead(const std::string& filename) const
   // suppress popup window on error
   UINT prev = ::SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
 
-  const_cast<FileReader*>(this)->m_Handle = ::CreateFileA(filename,
+  const_cast<FileReader*>(this)->m_Handle = ::CreateFileA(filename.c_str(),
 			  (GENERIC_READ),                // open for reading
 			  FILE_SHARE_READ,               // share for reading
 			  NULL,                          // no security
@@ -1415,6 +1425,110 @@ Kumu::DirScanner::GetNext(char* filename)
 }
 
 
+//
+Kumu::DirScannerEx::DirScannerEx() : m_Handle(0) {}
+
+//
+Result_t
+Kumu::DirScannerEx::Open(const std::string& dirname)
+{
+  Result_t result = RESULT_OK;
+
+  if ( ( m_Handle = opendir(dirname.c_str()) ) == 0 )
+    {
+      switch ( errno )
+	{
+	case ENOENT:
+	case ENOTDIR:
+	  result = RESULT_NOTAFILE;
+	case EACCES:
+	  result = RESULT_NO_PERM;
+	case ELOOP:
+	case ENAMETOOLONG:
+	  result = RESULT_PARAM;
+	case EMFILE:
+	case ENFILE:
+	  result = RESULT_STATE;
+	default:
+	  DefaultLogSink().Error("DirScanner::Open(%s): %s\n", dirname.c_str(), strerror(errno));
+	  result = RESULT_FAIL;
+	}
+    }
+
+  if ( KM_SUCCESS(result) )
+    m_Dirname = dirname;
+
+  KM_RESULT_STATE_TEST_IMPLICIT();
+  return result;
+}
+
+//
+Result_t
+Kumu::DirScannerEx::Close()
+{
+  if ( m_Handle == NULL )
+    return RESULT_FILEOPEN;
+
+  if ( closedir(m_Handle) == -1 )
+    {
+      switch ( errno )
+	{
+	case EBADF:
+	case EINTR:
+	  KM_RESULT_STATE_HERE();
+	  return RESULT_STATE;
+
+	default:
+	  DefaultLogSink().Error("DirScanner::Close(): %s\n", strerror(errno));
+	  return RESULT_FAIL;
+	}
+    }
+
+  m_Handle = 0;
+  return RESULT_OK;
+}
+
+//
+Result_t
+Kumu::DirScannerEx::GetNext(std::string& next_item_name, DirectoryEntryType_t& next_item_type)
+{
+  if ( m_Handle == 0 )
+    return RESULT_FILEOPEN;
+
+  struct dirent* entry;
+
+  for (;;)
+    {
+      if ( ( entry = readdir(m_Handle) ) == 0 )
+	return RESULT_ENDOFFILE;
+
+      break;
+    }
+
+  next_item_name.assign(entry->d_name, strlen(entry->d_name));
+
+  switch ( entry->d_type )
+    {
+    case DT_DIR:
+      next_item_type = DET_DIR;
+      break;
+
+    case DT_REG:
+      next_item_type = DET_FILE;
+      break;
+
+    case DT_LNK:
+      next_item_type = DET_LINK;
+      break;
+
+    default:
+      next_item_type = DET_DEV;
+    }
+
+  return RESULT_OK;
+}
+
+
 #endif // KM_WIN32
 
 
@@ -1553,6 +1667,31 @@ Kumu::DeletePath(const std::string& pathname)
 }
 
 
+//
+Result_t
+Kumu::DeleteDirectoryIfEmpty(const std::string& path)
+{
+  DirScanner source_dir;
+  char next_file[Kumu::MaxFilePath];
+
+  Result_t result = source_dir.Open(path);
+
+  if ( KM_FAILURE(result) )
+    return result;
+
+  while ( KM_SUCCESS(source_dir.GetNext(next_file)) )
+    {
+      if ( ( next_file[0] == '.' && next_file[1] == 0 )
+	   || ( next_file[0] == '.' && next_file[1] == '.' && next_file[2] == 0 ) )
+	continue;
+
+      return RESULT_NOT_EMPTY; // anything other than "." and ".." indicates a non-empty directory
+    }
+
+  return DeletePath(path);
+}
+
+
 //------------------------------------------------------------------------------------------
 //
 
@@ -1561,19 +1700,21 @@ Result_t
 Kumu::FreeSpaceForPath(const std::string& path, Kumu::fsize_t& free_space, Kumu::fsize_t& total_space)
 {
 #ifdef KM_WIN32
-	ULARGE_INTEGER lTotalNumberOfBytes;
-	ULARGE_INTEGER lTotalNumberOfFreeBytes;
+  ULARGE_INTEGER lTotalNumberOfBytes;
+  ULARGE_INTEGER lTotalNumberOfFreeBytes;
 
-	BOOL fResult = ::GetDiskFreeSpaceExA(path.c_str(), NULL, &lTotalNumberOfBytes, &lTotalNumberOfFreeBytes);
-	if (fResult) {
+  BOOL fResult = ::GetDiskFreeSpaceExA(path.c_str(), NULL, &lTotalNumberOfBytes, &lTotalNumberOfFreeBytes);
+  if ( fResult )
+    {
       free_space = static_cast<Kumu::fsize_t>(lTotalNumberOfFreeBytes.QuadPart);
       total_space = static_cast<Kumu::fsize_t>(lTotalNumberOfBytes.QuadPart);
       return RESULT_OK;
-	}
-	HRESULT LastError = ::GetLastError();
+    }
 
-	DefaultLogSink().Error("FreeSpaceForPath GetDiskFreeSpaceEx %s: %lu\n", path.c_str(), ::GetLastError());
-	return RESULT_FAIL;
+  HRESULT last_error = ::GetLastError();
+
+  DefaultLogSink().Error("FreeSpaceForPath GetDiskFreeSpaceEx %s: %lu\n", path.c_str(), last_error);
+  return RESULT_FAIL;
 #else // KM_WIN32
   struct statfs s;
 

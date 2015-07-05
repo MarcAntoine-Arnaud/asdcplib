@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2014, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.15 2014/01/02 23:29:21 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.18 2015/02/19 19:06:56 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -118,15 +118,26 @@ namespace AS_02
     }
 
     // Returns number of frames for data described by ADesc, given a duration in samples and an edit rate
-    inline ui32_t CalcFramesFromDurationInSamples(const ui32_t durationInSamples, const ASDCP::MXF::WaveAudioDescriptor& d,
+    inline ui32_t CalcFramesFromDurationInSamples(const ui32_t duration_samples, const ASDCP::MXF::WaveAudioDescriptor& d,
 						  const ASDCP::Rational& edit_rate)
     {
-      return static_cast<ui32_t>(static_cast<ui64_t>(durationInSamples) *
-				 static_cast<ui64_t>(d.AudioSamplingRate.Denominator * edit_rate.Numerator) /
-				 static_cast<ui64_t>(d.AudioSamplingRate.Numerator * edit_rate.Denominator));
+      ui32_t spf = CalcSamplesPerFrame(d, edit_rate);
+      ui32_t frames = duration_samples / spf;
+      
+      if ( duration_samples % spf != 0 )
+	{
+	  ++frames;
+	}
+
+      return frames;
     }
 
   } // namespace MXF
+
+
+  // IMF App 2 edit rates not already exposed in namespace ASDCP
+  const ASDCP::Rational EditRate_29_97 = ASDCP::Rational(30000, 1001);
+  const ASDCP::Rational EditRate_59_94 = ASDCP::Rational(60000, 1001);
 
   //---------------------------------------------------------------------------------
   // Accessors in the MXFReader and MXFWriter classes below return these types to

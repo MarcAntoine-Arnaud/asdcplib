@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2012, John Hurst
+Copyright (c) 2003-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-unwrap.cpp
-    \version $Id: asdcp-unwrap.cpp,v 1.4 2013/04/12 23:39:31 mikey Exp $
+    \version $Id: asdcp-unwrap.cpp,v 1.6 2015/02/19 22:42:18 mschroffel Exp $
     \brief   AS-DCP file manipulation utility
 
   This program extracts picture, sound and text essence from AS-DCP files.
@@ -61,7 +61,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2003-2012 John Hurst\n\n\
+Copyright (c) 2003-2015 John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",

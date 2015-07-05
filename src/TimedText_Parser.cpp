@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2007-2013, John Hurst
+Copyright (c) 2007-2014, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_TimedText.cpp
-    \version $Id: TimedText_Parser.cpp,v 1.19 2014/01/02 23:29:22 jhurst Exp $       
+    \version $Id: TimedText_Parser.cpp,v 1.21 2014/10/14 00:14:39 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -70,12 +70,15 @@ ASDCP::TimedText::LocalFilenameResolver::ResolveRID(const byte_t* uuid, TimedTex
   UUID RID(uuid);
   PathList_t found_list;
 
+#ifndef KM_WIN32
+  // TODO, fix this for win32 (needs regex)
   FindInPath(PathMatchRegex(RID.EncodeHex(buf, 64)), m_Dirname, found_list);
+#endif
 
   if ( found_list.size() == 1 )
     {
       FileReader Reader;
-      DefaultLogSink().Debug("retrieving resource %s from file %s\n", buf, found_list.front().c_str());
+      DefaultLogSink().Debug("Retrieving resource %s from file %s\n", buf, found_list.front().c_str());
 
       result = Reader.OpenRead(found_list.front().c_str());
 

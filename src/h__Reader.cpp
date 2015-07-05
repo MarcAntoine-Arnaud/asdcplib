@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    h__Reader.cpp
-    \version $Id: h__Reader.cpp,v 1.37 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: h__Reader.cpp,v 1.38 2014/05/13 23:05:51 jhurst Exp $
     \brief   MXF file reader base class
 */
 
@@ -38,7 +38,7 @@ using namespace ASDCP::MXF;
 
 static Kumu::Mutex sg_DefaultMDInitLock;
 static bool        sg_DefaultMDTypesInit = false;
-static const ASDCP::Dictionary *sg_dict;
+static const ASDCP::Dictionary *sg_dict = 0;
 
 //
 void
