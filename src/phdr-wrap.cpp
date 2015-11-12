@@ -26,7 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    phdr-wrap.cpp
-    \version $Id: phdr-wrap.cpp,v 1.4 2015/02/19 22:42:18 mschroffel Exp $       
+    \version $Id: phdr-wrap.cpp,v 1.6 2015/10/16 16:55:33 jhurst Exp $       
     \brief   prototype wrapping for HDR images in AS-02
 
   This program wraps IMF essence (P-HDR picture) in to an AS-02 MXF file.
@@ -152,21 +152,6 @@ Options:\n\
 }
 
 //
-static ASDCP::Rational
-decode_rational(const char* str_rat)
-{
-  assert(str_rat);
-  ui32_t Num = atoi(str_rat);
-  ui32_t Den = 0;
-
-  const char* den_str = strrchr(str_rat, '/');
-  if ( den_str != 0 )
-    Den = atoi(den_str+1);
-
-  return ASDCP::Rational(Num, Den);
-}
-
-//
 //
 class CommandOptions
 {
@@ -246,7 +231,11 @@ public:
 	      {
 	      case 'A':
 		TEST_EXTRA_ARG(i, 'A');
-		edit_rate = decode_rational(argv[i]);
+		if ( ! DecodeRational(argv[i], aspect_ratio) )
+		  {
+		    fprintf(stderr, "Error decoding aspect ratio value: %s\n", argv[i]);
+		    return;
+		  }
 		break;
 
 	      case 'a':
@@ -266,7 +255,7 @@ public:
 
 	      case 'b':
 		TEST_EXTRA_ARG(i, 'b');
-		fb_size = abs(atoi(argv[i]));
+		fb_size = Kumu::xabs(strtol(argv[i], 0, 10));
 
 		if ( verbose_flag )
 		  fprintf(stderr, "Frame Buffer size: %u bytes.\n", fb_size);
@@ -275,12 +264,12 @@ public:
 
 	      case 'D':
 		TEST_EXTRA_ARG(i, 'D');
-		component_depth = abs(atoi(argv[i]));
+		component_depth = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'd':
 		TEST_EXTRA_ARG(i, 'd');
-		duration = abs(atoi(argv[i]));
+		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'E': encrypt_header_flag = false; break;
@@ -288,7 +277,7 @@ public:
 
 	      case 'F':
 		TEST_EXTRA_ARG(i, 'F');
-		field_dominance = abs(atoi(argv[i]));
+		field_dominance = Kumu::xabs(strtol(argv[i], 0, 10));
 		if ( field_dominance > 1 )
 		  {
 		    fprintf(stderr, "Field dominance value must be \"0\" or \"1\"\n");
@@ -354,7 +343,12 @@ public:
 
 	      case 'r':
 		TEST_EXTRA_ARG(i, 'r');
-		edit_rate = decode_rational(argv[i]);
+		if ( ! DecodeRational(argv[i], edit_rate) )
+		  {
+		    fprintf(stderr, "Error decoding edit rate value: %s\n", argv[i]);
+		    return;
+		  }
+
 		break;
 
 	      case 'R':
@@ -363,17 +357,17 @@ public:
 
 	      case 's':
 		TEST_EXTRA_ARG(i, 's');
-		partition_space = abs(atoi(argv[i]));
+		partition_space = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 't':
 		TEST_EXTRA_ARG(i, 't');
-		rgba_MinRef = abs(atoi(argv[i]));
+		rgba_MinRef = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'T':
 		TEST_EXTRA_ARG(i, 'T');
-		rgba_MaxRef = abs(atoi(argv[i]));
+		rgba_MaxRef = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'u': show_ul_values_flag = true; break;
@@ -383,12 +377,12 @@ public:
 
 	      case 'x':
 		TEST_EXTRA_ARG(i, 'x');
-		horizontal_subsampling = abs(atoi(argv[i]));
+		horizontal_subsampling = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'X':
 		TEST_EXTRA_ARG(i, 'X');
-		vertical_subsampling = abs(atoi(argv[i]));
+		vertical_subsampling = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'Y':

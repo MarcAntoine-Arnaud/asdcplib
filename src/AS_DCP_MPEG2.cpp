@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_MPEG2.cpp
-    \version $Id: AS_DCP_MPEG2.cpp,v 1.43 2014/09/21 13:27:43 jhurst Exp $       
+    \version $Id: AS_DCP_MPEG2.cpp,v 1.44 2015/10/07 16:41:23 jhurst Exp $       
     \brief   AS-DCP library, MPEG2 essence reader and writer implementation
 */
 
@@ -308,7 +308,7 @@ ASDCP::MPEG2::FrameBuffer::Dump(FILE* stream, ui32_t dump_len) const
   if ( stream == 0 )
     stream = stderr;
 
-  fprintf(stream, "Frame: %06u, %c%-2hu, %7u bytes",
+  fprintf(stream, "Frame: %06u, %c%-2hhu, %7u bytes",
 	  m_FrameNumber, FrameTypeChar(m_FrameType), m_TemporalOffset, m_Size);
 
   if ( m_GOPStart )

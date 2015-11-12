@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_fileio.cpp
-    \version $Id: KM_fileio.cpp,v 1.38 2015/02/19 19:06:56 jhurst Exp $
+    \version $Id: KM_fileio.cpp,v 1.40 2015/10/07 16:58:03 jhurst Exp $
     \brief   portable file i/o
   */
 
@@ -41,6 +41,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _getcwd getcwd
 #define _unlink unlink
 #define _rmdir rmdir
+#endif
+
+// only needed by GetExecutablePath()
+#if defined(KM_MACOSX)
+#include <mach-o/dyld.h>
 #endif
 
 using namespace Kumu;
@@ -625,6 +630,55 @@ Kumu::PathMatchGlob::Match(const std::string& s) const {
 }
 
 #endif
+
+
+//------------------------------------------------------------------------------------------
+
+#define X_BUFSIZE 1024
+
+//
+std::string
+Kumu::GetExecutablePath(const std::string& default_path)
+{
+  char path[X_BUFSIZE] = {0};
+  bool success = false;
+
+#if defined(KM_WIN32)
+  DWORD size = X_BUFSIZE;
+  DWORD rc = GetModuleFileName(0, path, size);
+  success = ( rc != 0 );
+#elif defined(KM_MACOSX)
+  uint32_t size = X_BUFSIZE;
+  int rc = _NSGetExecutablePath(path, &size);
+  success = ( rc != -1 );
+#elif defined(__linux__)
+  size_t size = X_BUFSIZE;
+  ssize_t rc = readlink("/proc/self/exe", path, size);
+  success = ( rc != -1 );
+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
+  size_t size = X_BUFSIZE;
+  ssize_t rc = readlink("/proc/curproc/file", path, size);
+  success = ( rc != -1 );
+#elif defined(__FreeBSD__)
+  size_t size = X_BUFSIZE;
+  ssize_t rc = readlink("/proc/curproc/file", path, size);
+  success = ( rc != -1 );
+#elif defined(__NetBSD__)
+  size_t size = X_BUFSIZE;
+  ssize_t rc = readlink("/proc/curproc/file", path, size);
+  success = ( rc != -1 );
+#else
+#error GetExecutablePath --> Create a method for obtaining the executable name
+#endif
+
+  if ( success )
+    {
+      return Kumu::PathMakeCanonical(path);
+    }
+
+  return default_path;
+}
+
 
 //------------------------------------------------------------------------------------------
 // portable aspects of the file classes

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2014, John Hurst
+Copyright (c) 2005-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.h
-    \version $Id: MXF.h,v 1.54 2014/09/21 13:27:43 jhurst Exp $
+    \version $Id: MXF.h,v 1.57 2015/10/10 20:26:29 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -64,15 +64,15 @@ namespace ASDCP
 
 	public:
 	  //
-	  class Pair : public Kumu::IArchive
+	  class PartitionPair : public Kumu::IArchive
 	    {
 	    public:
 	      ui32_t BodySID;
 	      ui64_t ByteOffset;
 
-	      Pair() : BodySID(0), ByteOffset(0) {}
-	      Pair(ui32_t sid, ui64_t offset) : BodySID(sid), ByteOffset(offset) {}
-	      virtual ~Pair() {}
+	      PartitionPair() : BodySID(0), ByteOffset(0) {}
+	      PartitionPair(ui32_t sid, ui64_t offset) : BodySID(sid), ByteOffset(offset) {}
+	      virtual ~PartitionPair() {}
 
 	      ui32_t Size() { return sizeof(ui32_t) + sizeof(ui64_t); }
 
@@ -99,13 +99,17 @@ namespace ASDCP
 	    };
 
 	  const Dictionary*& m_Dict;
-	  Array<Pair> PairArray;
+
+	  typedef SimpleArray<PartitionPair>::iterator pair_iterator;
+	  typedef SimpleArray<PartitionPair>::const_iterator const_pair_iterator;
+
+	  SimpleArray<PartitionPair> PairArray;
 
 	RIP(const Dictionary*& d) : m_Dict(d) {}
 	  virtual ~RIP() {}
 	  virtual Result_t InitFromFile(const Kumu::FileReader& Reader);
 	  virtual Result_t WriteToFile(Kumu::FileWriter& Writer);
-	  virtual Result_t GetPairBySID(ui32_t, Pair&) const;
+	  virtual bool GetPairBySID(ui32_t, PartitionPair&) const;
 	  virtual void     Dump(FILE* = 0);
 	};
 
@@ -180,6 +184,10 @@ namespace ASDCP
 	      LocalTagEntry() { Tag.a = Tag.b = 0; }
 	    LocalTagEntry(const TagValue& tag, ASDCP::UL& ul) : Tag(tag), UL(ul) {}
 
+	      bool operator<(const LocalTagEntry& rhs) const {
+		return ( ( Tag.a < rhs.Tag.a ) || ( Tag.b < rhs.Tag.b ) );
+	      }
+
 	      inline const char* EncodeString(char* str_buf, ui32_t buf_len) const {
 		snprintf(str_buf, buf_len, "%02x %02x: ", Tag.a, Tag.b);
 		UL.EncodeString(str_buf + strlen(str_buf), buf_len - strlen(str_buf));
@@ -227,8 +235,12 @@ namespace ASDCP
 
 	public:
 	optional_property() : m_has_value(false) {}
-	optional_property(const PropertyType& value) : m_property(value), m_has_value(false) {}
-	  const optional_property<PropertyType>& operator=(const PropertyType& rhs) { this->m_property = rhs; this->m_has_value = true; return *this; }
+	optional_property(const PropertyType& value) : m_property(value), m_has_value(true) {}
+	  const optional_property<PropertyType>& operator=(const PropertyType& rhs) {
+	    this->m_property = rhs;
+	    this->m_has_value = true;
+	    return *this;
+	  }
 	  bool operator==(const PropertyType& rhs) const { return this->m_property == rhs; }
 	  bool operator==(const optional_property<PropertyType>& rhs) const { return this->m_property == rhs.m_property; }
 	  operator PropertyType&() { return this->m_property; }
@@ -236,6 +248,30 @@ namespace ASDCP
 	  void set_has_value(bool has_value = true) { this->m_has_value = has_value; }
 	  void reset(const PropertyType& rhs) { this->m_has_value = false; }
 	  bool empty() const { return ! m_has_value; }
+	  PropertyType& get() { return m_property; }
+	  const PropertyType& const_get() const { return m_property; }
+	};
+
+      // wrapper object manages optional properties
+      template <class PropertyType>
+	class optional_container_property
+	{
+	  PropertyType m_property;
+
+	public:
+	  optional_container_property() {}
+	optional_container_property(const PropertyType& value) : m_property(value) {}
+	  const optional_container_property<PropertyType>& operator=(const PropertyType& rhs) {
+	    this->Copy(rhs.m_property);
+	    return *this;
+	  }
+
+	  bool operator==(const PropertyType& rhs) const { return this->m_property == rhs; }
+	  bool operator==(const optional_property<PropertyType>& rhs) const { return this->m_property == rhs.m_property; }
+	  operator PropertyType&() { return this->m_property; }
+	  void set(const PropertyType& rhs) { this->m_property = rhs; }
+	  void reset(const PropertyType& rhs) { this->clear(); }
+	  bool empty() const { return ! this->m_property.HasValue(); }
 	  PropertyType& get() { return m_property; }
 	  const PropertyType& const_get() const { return m_property; }
 	};
@@ -280,7 +316,7 @@ namespace ASDCP
 	  ui16_t       Version;
 	  optional_property<ui32_t> ObjectModelVersion;
 	  optional_property<UUID> PrimaryPackage;
-	  Batch<UUID>  Identifications;
+	  Array<UUID>  Identifications;
 	  UUID         ContentStorage;
 	  UL           OperationalPattern;
 	  Batch<UL>    EssenceContainers;
@@ -360,8 +396,8 @@ namespace ASDCP
 	  ui32_t      BodySID;
 	  ui8_t       SliceCount;
 	  ui8_t       PosTableCount;
-	  Batch<DeltaEntry> DeltaEntryArray;
-	  Batch<IndexEntry> IndexEntryArray;
+	  Array<DeltaEntry> DeltaEntryArray;
+	  Array<IndexEntry> IndexEntryArray;
 
 	  IndexTableSegment(const Dictionary*&);
 	  virtual ~IndexTableSegment();

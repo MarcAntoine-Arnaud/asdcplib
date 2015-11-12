@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    wavesplit.cpp
-    \version $Id: wavesplit.cpp,v 1.12 2014/09/21 13:27:43 jhurst Exp $
+    \version $Id: wavesplit.cpp,v 1.13 2015/10/07 16:41:23 jhurst Exp $
     \brief   WAV file splitter
 */
 
@@ -138,12 +138,12 @@ public:
 
 	      case 'd':
 		TEST_EXTRA_ARG(i, 'd');
-		duration = abs(strtol(argv[i], 0, 10));
+		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'f':
 		TEST_EXTRA_ARG(i, 'f');
-		start_frame = abs(strtol(argv[i], 0, 10));
+		start_frame = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'h': help_flag = true; break;

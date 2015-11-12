@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    kmrandgen.cpp
-    \version $Id: kmrandgen.cpp,v 1.8 2009/03/04 17:52:45 jhurst Exp $
+    \version $Id: kmrandgen.cpp,v 1.9 2015/10/07 16:41:23 jhurst Exp $
     \brief   psuedo-random number generation utility
   */
 
@@ -133,7 +133,7 @@ public:
 
 	      case 's':
 		TEST_EXTRA_ARG(i, 's');
-		request_size = abs(atoi(argv[i]));
+		request_size = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'v': verbose_flag = true; break;

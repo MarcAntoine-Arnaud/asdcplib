@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2012, John Hurst
+Copyright (c) 2004-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,14 +25,15 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_platform.h
-    \version $Id: KM_platform.h,v 1.8 2013/05/28 18:13:12 jhurst Exp $
+    \version $Id: KM_platform.h,v 1.9 2015/10/07 16:41:23 jhurst Exp $
     \brief   platform portability
   */
 
 #ifndef _KM_PLATFORM_H_
 # define _KM_PLATFORM_H_
 
-# ifdef __APPLE__
+#if defined(__APPLE__) && defined(__MACH__)
+#  define KM_MACOSX
 #  ifdef __BIG_ENDIAN__
 #   define KM_BIG_ENDIAN
 #  endif
@@ -120,11 +121,17 @@ namespace Kumu
   //
   template<class T>
     inline T xclamp(T v, T l, T h) {
-    if ( v < l ) return l;
-    if ( v > h ) return h;
+    if ( v < l ) { return l; }
+    if ( v > h ) { return h; }
     return v;
   }
 
+  //
+  template<class T>
+    inline T xabs(T n) {
+    if ( n < 0 ) { return -n; }
+    return n;
+  }
 
   // read an integer from byte-structured storage
   template<class T>
@@ -133,6 +140,7 @@ namespace Kumu
   // write an integer to byte-structured storage
   template<class T>
   inline void i2p(T i, byte_t* p) { *(T*)p = i; }
+
 
 # ifdef KM_BIG_ENDIAN
 #  define KM_i16_LE(i)        Kumu::Swap2(i)

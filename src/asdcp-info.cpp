@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-info.cpp
-    \version $Id: asdcp-info.cpp,v 1.11 2015/02/19 22:42:18 mschroffel Exp $
+    \version $Id: asdcp-info.cpp,v 1.12 2015/10/07 16:41:23 jhurst Exp $
     \brief   AS-DCP file metadata utility
 
   This program provides metadata information about an AS-DCP file.
@@ -164,7 +164,7 @@ public:
 
 	      case 't':
 		TEST_EXTRA_ARG(i, 't');
-		max_bitrate = abs(atoi(argv[i]));
+		max_bitrate = Kumu::xabs(strtol(argv[i], 0, 10));
 		max_bitrate_flag = true;
 		break;
 

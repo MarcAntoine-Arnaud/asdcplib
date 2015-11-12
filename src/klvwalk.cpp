@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2013, John Hurst
+Copyright (c) 2005-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    klvwalk.cpp
-    \version $Id: klvwalk.cpp,v 1.22 2013/06/07 00:41:00 jhurst Exp $
+    \version $Id: klvwalk.cpp,v 1.23 2015/10/09 23:41:11 jhurst Exp $
     \brief   KLV+MXF test
 */
 
@@ -236,7 +236,7 @@ main(int argc, const char** argv)
 	  
 	  if ( ASDCP_SUCCESS(result) && RIP.PairArray.size() > 2 )
 	    {
-	      MXF::Array<MXF::RIP::Pair>::const_iterator pi = RIP.PairArray.begin();
+	      MXF::RIP::const_pair_iterator pi = RIP.PairArray.begin();
 
 	      for ( pi++; pi != RIP.PairArray.end() && ASDCP_SUCCESS(result); pi++ )
 		{
@@ -309,7 +309,7 @@ main(int argc, const char** argv)
 	    {
 	      RIP.Dump();
 
-	      MXF::Array<MXF::RIP::Pair>::const_iterator i;
+	      MXF::RIP::const_pair_iterator i;
 	      for ( i = RIP.PairArray.begin(); i != RIP.PairArray.end(); ++i )
 		{
 		  Reader.Seek(i->ByteOffset);

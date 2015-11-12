@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    Codestream_Parser.cpp
-    \version $Id: JP2K_Codestream_Parser.cpp,v 1.8 2014/01/02 23:29:22 jhurst Exp $
+    \version $Id: JP2K_Codestream_Parser.cpp,v 1.9 2015/10/09 23:41:11 jhurst Exp $
     \brief   AS-DCP library, JPEG 2000 codestream essence reader implementation
 */
 
@@ -163,9 +163,9 @@ ASDCP::JP2K::ParseMetadataIntoDesc(const FrameBuffer& FB, PictureDescriptor& PDe
 	case MRK_QCD:
 	  memset(&PDesc.QuantizationDefault, 0, sizeof(QuantizationDefault_t));
 
-	  if ( NextMarker.m_DataSize < 16 )
+	  if ( NextMarker.m_DataSize < 3 ) // ( Sqcd = 8 bits, SPqcd = 8 bits ) == 2 bytes, error if not greater
 	    {
-	      DefaultLogSink().Error("No quantization signaled\n");
+	      DefaultLogSink().Error("No quantization signaled. QCD size=%s.\n", NextMarker.m_DataSize);
 	      return RESULT_RAW_FORMAT;
 	    }
 	  

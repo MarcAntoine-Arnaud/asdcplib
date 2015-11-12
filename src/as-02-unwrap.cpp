@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-unwrap.cpp
-    \version $Id: as-02-unwrap.cpp,v 1.11 2015/02/19 19:06:57 jhurst Exp $       
+    \version $Id: as-02-unwrap.cpp,v 1.13 2015/10/07 16:41:23 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program extracts picture and sound from AS-02 files.
@@ -86,7 +86,7 @@ USAGE: %s [-h|-help] [-V]\n\
        %s [-1|-2] [-b <buffer-size>] [-d <duration>]\n\
        [-f <starting-frame>] [-m] [-p <frame-rate>] [-R] [-s <size>] [-v] [-W]\n\
        [-w] <input-file> [<file-prefix>]\n\n",
-	  PROGRAM_NAME, PROGRAM_NAME, PROGRAM_NAME);
+	  PROGRAM_NAME, PROGRAM_NAME);
 
   fprintf(stream, "\
 Options:\n\
@@ -178,7 +178,7 @@ public:
 
 	      case 'b':
 		TEST_EXTRA_ARG(i, 'b');
-		fb_size = abs(atoi(argv[i]));
+		fb_size = Kumu::xabs(strtol(argv[i], 0, 10));
 
 		if ( verbose_flag )
 		  fprintf(stderr, "Frame Buffer size: %u bytes.\n", fb_size);
@@ -188,12 +188,12 @@ public:
 	      case 'd':
 		TEST_EXTRA_ARG(i, 'd');
 		duration_flag = true;
-		duration = abs(atoi(argv[i]));
+		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'f':
 		TEST_EXTRA_ARG(i, 'f');
-		start_frame = abs(atoi(argv[i]));
+		start_frame = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'h': help_flag = true; break;
@@ -201,12 +201,12 @@ public:
 
 	      case 'p':
 		TEST_EXTRA_ARG(i, 'p');
-		picture_rate = abs(atoi(argv[i]));
+		picture_rate = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 's':
 		TEST_EXTRA_ARG(i, 's');
-		fb_dump_size = abs(atoi(argv[i]));
+		fb_dump_size = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'V': version_flag = true; break;
@@ -215,7 +215,7 @@ public:
 
 	      case 'w':
 		TEST_EXTRA_ARG(i, 'w');
-		number_width = abs(atoi(argv[i]));
+		number_width = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'Z': j2c_pedantic = false; break;

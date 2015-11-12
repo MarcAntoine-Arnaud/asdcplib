@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_fileio.h
-    \version $Id: KM_fileio.h,v 1.21 2014/09/21 13:27:43 jhurst Exp $
+    \version $Id: KM_fileio.h,v 1.22 2015/10/07 16:41:23 jhurst Exp $
     \brief   portable file i/o
   */
 
@@ -220,7 +220,7 @@ namespace Kumu
   {
   public:
     virtual ~PathMatchAny() {}
-    inline bool Match(const std::string& s) const { return true; }
+    inline bool Match(const std::string&) const { return true; }
   };
 
 #ifndef KM_WIN32
@@ -260,6 +260,8 @@ namespace Kumu
 
   PathList_t& FindInPaths(const IPathMatch& Pattern, const PathList_t& SearchPaths,
 			  PathList_t& FoundPaths, bool one_shot = false, char separator = '/');
+
+  std::string GetExecutablePath(const std::string& default_path);
 
   //------------------------------------------------------------------------------------------
   // Directory Manipulation

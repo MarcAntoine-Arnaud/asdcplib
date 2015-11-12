@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-wrap.cpp
-    \version $Id: asdcp-wrap.cpp,v 1.19 2015/02/23 21:57:05 jhurst Exp $
+    \version $Id: asdcp-wrap.cpp,v 1.23 2015/10/14 16:48:22 jhurst Exp $
     \brief   AS-DCP file manipulation utility
 
   This program wraps d-cinema essence (picture, sound or text) into an AS-DCP
@@ -169,7 +169,9 @@ Options:\n\
                       will overide -C and -l options with Configuration 4 \n\
                       Channel Assigment and no format label respectively. \n\
   -v                - Verbose, prints informative messages to stderr\n\
-  -W                - Read input file only, do not write source file\n\
+  -w                - When writing 377-4 MCA labels, use the WTF Channel\n\
+                      assignment label instead of the standard MCA label\n\
+  -W                - Read input file only, do not write output file\n\
   -z                - Fail if j2c inputs have unequal parameters (default)\n\
   -Z                - Ignore unequal parameters in j2c inputs\n\
 \n\
@@ -241,9 +243,10 @@ public:
   UL picture_coding;
   UL aux_data_coding;
   bool dolby_atmos_sync_flag;  // if true, insert a Dolby Atmos Synchronization channel.
-  ui32_t ffoa;  /// first frame of action for atmos wrapping
-  ui32_t max_channel_count; /// max channel count for atmos wrapping
-  ui32_t max_object_count; /// max object count for atmos wrapping
+  ui32_t ffoa;                 // first frame of action for atmos wrapping
+  ui32_t max_channel_count;    // max channel count for atmos wrapping
+  ui32_t max_object_count;     // max object count for atmos wrapping
+  bool use_interop_sound_wtf;  // make true to force WTF assignment label instead of MCA
   ASDCP::MXF::ASDCP_MCAConfigParser mca_config;
 
   //
@@ -299,7 +302,8 @@ public:
     ffoa(0), max_channel_count(10), max_object_count(118), // hard-coded sample atmos properties
     dolby_atmos_sync_flag(false),
     show_ul_values_flag(false),
-    mca_config(g_dict)
+    mca_config(g_dict),
+    use_interop_sound_wtf(false)
   {
     memset(key_value, 0, KeyLen);
     memset(key_id_value, 0, UUIDlen);
@@ -347,7 +351,7 @@ public:
 
 	      case 'b':
 		TEST_EXTRA_ARG(i, 'b');
-		fb_size = abs(atoi(argv[i]));
+		fb_size = Kumu::xabs(strtol(argv[i], 0, 10));
 
 		if ( verbose_flag )
 		  fprintf(stderr, "Frame Buffer size: %u bytes.\n", fb_size);
@@ -365,7 +369,7 @@ public:
 
 	      case 'd':
 		TEST_EXTRA_ARG(i, 'd');
-		duration = abs(atoi(argv[i]));
+		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'E': encrypt_header_flag = false; break;
@@ -373,7 +377,7 @@ public:
 
 	      case 'f':
 		TEST_EXTRA_ARG(i, 'f');
-		start_frame = abs(atoi(argv[i]));
+		start_frame = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'g': write_partial_pcm_flag = true; break;
@@ -434,13 +438,14 @@ public:
 
 	      case 'p':
 		TEST_EXTRA_ARG(i, 'p');
-		picture_rate = abs(atoi(argv[i]));
+		picture_rate = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 's': dolby_atmos_sync_flag = true; break;
 	      case 'u': show_ul_values_flag = true; break;
 	      case 'V': version_flag = true; break;
 	      case 'v': verbose_flag = true; break;
+	      case 'w': use_interop_sound_wtf = true; break;
 	      case 'W': no_write_flag = true; break;
 	      case 'Z': j2c_pedantic = false; break;
 	      case 'z': j2c_pedantic = true; break;
@@ -1035,7 +1040,18 @@ write_PCM_file(CommandOptions& Options)
 		  return RESULT_FAIL;
 		}
 
-	      essence_descriptor->ChannelAssignment = g_dict->ul(MDD_DCAudioChannelCfg_MCA);
+	      if ( Options.channel_assignment.HasValue() )
+		{
+		  essence_descriptor->ChannelAssignment = Options.channel_assignment;
+		}
+	      else if ( Options.use_interop_sound_wtf )
+		{
+		  essence_descriptor->ChannelAssignment = g_dict->ul(MDD_DCAudioChannelCfg_4_WTF);
+		}
+	      else
+		{
+		  essence_descriptor->ChannelAssignment = g_dict->ul(MDD_DCAudioChannelCfg_MCA);
+		}
 
 	      // add descriptors to the essence_descriptor and header
 	      ASDCP::MXF::InterchangeObject_list_t::iterator i;
@@ -1681,8 +1697,7 @@ main(int argc, const char** argv)
 	case ESS_DCDATA_UNKNOWN:
 	  if ( ! Options.aux_data_coding.HasValue() )
 	    {
-	      fprintf(stderr, "Option \"-A <UL>\" is required for Aux Data essence.\n",
-		      Options.filenames.front().c_str());
+	      fprintf(stderr, "Option \"-A <UL>\" is required for Aux Data essence.\n");
 	      return 3;
 	    }
 	  else

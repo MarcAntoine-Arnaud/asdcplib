@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXFTypes.h
-    \version $Id: MXFTypes.h,v 1.35 2015/02/19 19:06:57 jhurst Exp $
+    \version $Id: MXFTypes.h,v 1.38 2015/10/12 15:30:46 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -35,6 +35,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "KLV.h"
 #include <list>
 #include <vector>
+#include <set>
 #include <map>
 #include <wchar.h>
 
@@ -96,97 +97,117 @@ namespace ASDCP
 	};
 
       //
-      template <class T>
-	class Batch : public std::vector<T>, public Kumu::IArchive
+      template <class ContainerType>
+	class FixedSizeItemCollection : public ContainerType, public Kumu::IArchive
 	{
 	public:
-	  Batch() {}
-	  virtual ~Batch() {}
+	  FixedSizeItemCollection() {}
+	  virtual ~FixedSizeItemCollection() {}
 
-	  //
-	  virtual bool Unarchive(Kumu::MemIOReader* Reader) {
-	    ui32_t ItemCount, ItemSize;
-	    if ( ! Reader->ReadUi32BE(&ItemCount) ) return false;
-	    if ( ! Reader->ReadUi32BE(&ItemSize) ) return false;
+	  ui32_t ItemSize() const {
+	    typename ContainerType::value_type tmp_item;
+	    return tmp_item.ArchiveLength();
+	  }
 
-	    if ( ( ItemCount > 65536 ) || ( ItemSize > 1024 ) )
-	      return false;
+	  bool HasValue() const { return ! this->empty(); }
 
+	  ui32_t ArchiveLength() const {
+	    return ( sizeof(ui32_t) * 2 ) +  ( this->size() * this->ItemSize() );
+	  }
+
+	  bool Archive(Kumu::MemIOWriter* Writer) const {
+	    if ( ! Writer->WriteUi32BE(this->size()) ) return false;
+	    if ( ! Writer->WriteUi32BE(this->ItemSize()) ) return false;
+	    if ( this->empty() ) return true;
+	    
+	    typename ContainerType::const_iterator i;
 	    bool result = true;
-	    for ( ui32_t i = 0; i < ItemCount && result; i++ )
+	    for ( i = this->begin(); i != this->end() && result; ++i )
 	      {
-		T Tmp;
-		result = Tmp.Unarchive(Reader);
-
-		if ( result )
-		  this->push_back(Tmp);
+		result = i->Archive(Writer);
 	      }
 
 	    return result;
 	  }
 
-	  inline virtual bool HasValue() const { return ! this->empty(); }
-
-	  virtual ui32_t ArchiveLength() const {
-	    ui32_t arch_size = sizeof(ui32_t)*2;
-
-	    typename std::vector<T>::const_iterator l_i = this->begin();
-	    assert(l_i != this->end());
-
-	    for ( ; l_i != this->end(); l_i++ )
-	      arch_size += l_i->ArchiveLength();
-	    
-	    return arch_size;
-	  }
-
 	  //
-	  virtual bool Archive(Kumu::MemIOWriter* Writer) const {
-	    if ( ! Writer->WriteUi32BE(this->size()) ) return false;
-	    byte_t* p = Writer->CurrentData();
+	  bool Unarchive(Kumu::MemIOReader* Reader) {
+	    ui32_t item_count, item_size;
+	    if ( ! Reader->ReadUi32BE(&item_count) ) return false;
+	    if ( ! Reader->ReadUi32BE(&item_size) ) return false;
 
-	    if ( ! Writer->WriteUi32BE(0) ) return false;
-	    if ( this->empty() ) return true;
-	    
-	    typename std::vector<T>::const_iterator l_i = this->begin();
-	    assert(l_i != this->end());
-
-	    ui32_t ItemSize = Writer->Remainder();
-	    if ( ! (*l_i).Archive(Writer) ) return false;
-	    ItemSize -= Writer->Remainder();
-	    Kumu::i2p<ui32_t>(KM_i32_BE(ItemSize), p);
-	    l_i++;
+	    if ( item_count > 0 )
+	      {
+		if ( this->ItemSize() != item_size ) return false;
+	      }
 
 	    bool result = true;
-	    for ( ; l_i != this->end() && result; l_i++ )
-	      result = (*l_i).Archive(Writer);
+	    for ( ui32_t i = 0; i < item_count && result; ++i )
+	      {
+		typename ContainerType::value_type tmp_item;
+		result = tmp_item.Unarchive(Reader);
+
+		if ( result )
+		  {
+		    this->push_back(tmp_item);
+		  }
+	      }
 
 	    return result;
 	  }
 
-	  //
-	  void Dump(FILE* stream = 0, ui32_t depth = 0)
-	    {
-	      char identbuf[IdentBufferLen];
+	  void Dump(FILE* stream = 0, ui32_t depth = 0) {
+	    char identbuf[IdentBufferLen];
 
-	      if ( stream == 0 )
+	    if ( stream == 0 )
+	      {
 		stream = stderr;
-
-	      typename std::vector<T>::iterator i = this->begin();
-	      for ( ; i != this->end(); i++ )
+	      }
+	    
+	    typename ContainerType::const_iterator i;
+	    for ( i = this->begin(); i != this->end(); ++i )
+	      {
 		fprintf(stream, "  %s\n", (*i).EncodeString(identbuf, IdentBufferLen));
-	    }
+	      }
+	  }
 	};
+
+
+      template <class item_type>
+	class PushSet : public std::set<item_type>
+      {
+      public:
+	PushSet() {}
+	virtual ~PushSet() {}
+	void push_back(const item_type& item) { this->insert(item); }
+      };
+
+      template <class ItemType>
+	class Batch : public FixedSizeItemCollection<PushSet<ItemType> >
+      {
+      public:
+	Batch() {}
+	virtual ~Batch() {}
+      };
+
+      template <class ItemType>
+	class Array : public FixedSizeItemCollection<std::vector<ItemType> >
+      {
+      public:
+	Array() {}
+	virtual ~Array() {}
+      };
 
       //
       template <class T>
-	class Array : public std::list<T>, public Kumu::IArchive
+	class SimpleArray : public std::list<T>, public Kumu::IArchive
 	{
 	public:
-	  Array() {}
-	  virtual ~Array() {}
+	  SimpleArray() {}
+	  virtual ~SimpleArray() {}
 
 	  //
-	  virtual bool Unarchive(Kumu::MemIOReader* Reader)
+	  bool Unarchive(Kumu::MemIOReader* Reader)
 	    {
 	      bool result = true;
 
@@ -194,15 +215,19 @@ namespace ASDCP
 		{
 		  T Tmp;
 		  result = Tmp.Unarchive(Reader);
-		  this->push_back(Tmp);
+
+		  if ( result )
+		    {
+		      this->push_back(Tmp);
+		    }
 		}
 
 	      return result;
 	    }
 
-	  inline virtual bool HasValue() const { return ! this->empty(); }
+	  inline bool HasValue() const { return ! this->empty(); }
 
-	  virtual ui32_t ArchiveLength() const {
+	  ui32_t ArchiveLength() const {
 	    ui32_t arch_size = 0;
 
 	    typename std::list<T>::const_iterator l_i = this->begin();
@@ -214,7 +239,7 @@ namespace ASDCP
 	  }
 
 	  //
-	  virtual bool Archive(Kumu::MemIOWriter* Writer) const {
+	  bool Archive(Kumu::MemIOWriter* Writer) const {
 	    bool result = true;
 	    typename std::list<T>::const_iterator l_i = this->begin();
 

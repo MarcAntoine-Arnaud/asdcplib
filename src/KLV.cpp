@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    KLV.cpp
-  \version $Id: KLV.cpp,v 1.15 2014/09/21 13:27:43 jhurst Exp $
+  \version $Id: KLV.cpp,v 1.16 2015/10/12 15:30:46 jhurst Exp $
   \brief   KLV objects
 */
 
@@ -94,19 +94,20 @@ ASDCP::KLVPacket::InitFromBuffer(const byte_t* buf, ui32_t buf_len)
 
   if ( ber_len > ( buf_len - SMPTE_UL_LENGTH ) )
     {
-      DefaultLogSink().Error("BER encoding length exceeds buffer size\n");
+      DefaultLogSink().Error("BER encoding length exceeds buffer size.\n");
       return RESULT_FAIL;
     }
 
   if ( ber_len == 0 )
     {
-      DefaultLogSink().Error("KLV format error, zero BER length not allowed\n");
+      DefaultLogSink().Error("KLV format error, zero BER length not allowed.\n");
       return RESULT_FAIL;
     }
 
   ui64_t tmp_size;
   if ( ! Kumu::read_BER(buf + SMPTE_UL_LENGTH, &tmp_size) )
     {
+      DefaultLogSink().Error("KLV format error, BER decode failure.\n");
       return RESULT_FAIL;
     }
 

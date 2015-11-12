@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-test.cpp
-    \version $Id: asdcp-test.cpp,v 1.52 2015/02/19 22:42:18 mschroffel Exp $       
+    \version $Id: asdcp-test.cpp,v 1.53 2015/10/07 16:41:23 jhurst Exp $       
     \brief   AS-DCP file manipulation utility
 
   This program provides command line access to the major features of the asdcplib
@@ -379,7 +379,7 @@ public:
 
 	      case 'b':
 		TEST_EXTRA_ARG(i, 'b');
-		fb_size = abs(atoi(argv[i]));
+		fb_size = Kumu::xabs(strtol(argv[i], 0, 10));
 
 		if ( verbose_flag )
 		  fprintf(stderr, "Frame Buffer size: %u bytes.\n", fb_size);
@@ -395,7 +395,7 @@ public:
 	      case 'd':
 		TEST_EXTRA_ARG(i, 'd');
 		duration_flag = true;
-		duration = abs(atoi(argv[i]));
+		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'E': encrypt_header_flag = false; break;
@@ -403,7 +403,7 @@ public:
 
 	      case 'f':
 		TEST_EXTRA_ARG(i, 'f');
-		start_frame = abs(atoi(argv[i]));
+		start_frame = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'G': mode = MMT_GOP_START; break;
@@ -452,7 +452,7 @@ public:
 
 	      case 'p':
 		TEST_EXTRA_ARG(i, 'p');
-		picture_rate = abs(atoi(argv[i]));
+		picture_rate = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'R': do_repeat = true; break;
@@ -460,7 +460,7 @@ public:
 
 	      case 's':
 		TEST_EXTRA_ARG(i, 's');
-		fb_dump_size = abs(atoi(argv[i]));
+		fb_dump_size = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 't': mode = MMT_DIGEST; break;
@@ -472,7 +472,7 @@ public:
 
 	      case 'w':
 		TEST_EXTRA_ARG(i, 'w');
-		number_width = abs(atoi(argv[i]));
+		number_width = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
 	      case 'x':

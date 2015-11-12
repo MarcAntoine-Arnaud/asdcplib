@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Reader.cpp
-  \version $Id: h__02_Reader.cpp,v 1.12 2014/10/22 22:58:24 jhurst Exp $
+  \version $Id: h__02_Reader.cpp,v 1.15 2015/10/12 15:30:46 jhurst Exp $
   \brief   MXF file reader base class
 */
 
@@ -65,7 +65,7 @@ AS_02::default_md_object_init()
     
 AS_02::MXF::AS02IndexReader::AS02IndexReader(const ASDCP::Dictionary*& d) :
   m_Duration(0), m_BytesPerEditUnit(0),
-  ASDCP::MXF::Partition(m_Dict), m_Dict(d) {}
+  ASDCP::MXF::Partition(d), m_Dict(d) {}
 
 AS_02::MXF::AS02IndexReader::~AS02IndexReader() {}
 
@@ -77,7 +77,7 @@ AS_02::MXF::AS02IndexReader::InitFromFile(const Kumu::FileReader& reader, const 
   body_part_array_t body_part_array;
   body_part_array_t::const_iterator body_part_iter;
 
-  ASDCP::MXF::Array<ASDCP::MXF::RIP::Pair>::const_iterator i;
+  RIP::const_pair_iterator i;
   Result_t result = m_IndexSegmentData.Capacity(128*Kumu::Kilobyte); // will be grown if needed
   ui32_t first_body_sid = 0;
 
@@ -281,13 +281,15 @@ AS_02::MXF::AS02IndexReader::InitFromBuffer(const byte_t* p, ui32_t l, const ui6
 	}
       else
 	{
-	  DefaultLogSink().Error("Error initializing packet\n");
+	  DefaultLogSink().Error("Error initializing index segment packet.\n");
 	  delete object;
 	}
     }
 
   if ( KM_FAILURE(result) )
-    DefaultLogSink().Error("Failed to initialize AS02IndexReader\n");
+    {
+      DefaultLogSink().Error("Failed to initialize AS02IndexReader.\n");
+    }
 
   return result;
 }
@@ -429,7 +431,7 @@ AS_02::h__AS02Reader::OpenMXFRead(const char* filename)
 
       Kumu::fpos_t first_partition_after_header = 0;
       bool has_body_sid = false;
-      Array<RIP::Pair>::iterator r_i;
+      RIP::pair_iterator r_i;
 
       for ( r_i = m_RIP.PairArray.begin(); r_i != m_RIP.PairArray.end(); ++r_i )
 	{

@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Writer.cpp
-  \version $Id: h__02_Writer.cpp,v 1.13 2014/10/22 19:19:49 jhurst Exp $
+  \version $Id: h__02_Writer.cpp,v 1.14 2015/10/09 23:41:11 jhurst Exp $
   \brief   MXF file writer base class
 */
 
@@ -195,7 +195,7 @@ AS_02::h__AS02WriterFrame::WriteEKLVPacket(const ASDCP::FrameBuffer& FrameBuf,co
     {
       m_IndexWriter.ThisPartition = m_File.Tell();
       m_IndexWriter.WriteToFile(m_File);
-      m_RIP.PairArray.push_back(RIP::Pair(0, m_IndexWriter.ThisPartition));
+      m_RIP.PairArray.push_back(RIP::PartitionPair(0, m_IndexWriter.ThisPartition));
 
       UL body_ul(m_Dict->ul(MDD_ClosedCompleteBodyPartition));
       Partition body_part(m_Dict);
@@ -206,7 +206,7 @@ AS_02::h__AS02WriterFrame::WriteEKLVPacket(const ASDCP::FrameBuffer& FrameBuf,co
 
       body_part.BodyOffset = m_StreamOffset;
       result = body_part.WriteToFile(m_File, body_ul);
-      m_RIP.PairArray.push_back(RIP::Pair(1, body_part.ThisPartition));
+      m_RIP.PairArray.push_back(RIP::PartitionPair(1, body_part.ThisPartition));
     }
 
   return result;

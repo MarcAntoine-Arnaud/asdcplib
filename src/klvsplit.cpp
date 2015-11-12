@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    klvwalk.cpp
-    \version $Id: klvsplit.cpp,v 1.3 2013/06/09 20:17:31 jhurst Exp $
+    \version $Id: klvsplit.cpp,v 1.5 2015/10/07 16:41:23 jhurst Exp $
     \brief   KLV+MXF test
 */
 
@@ -136,7 +136,7 @@ USAGE: %s [-l <limit>] [-p <prefix>] [-s <suffix>] [-u|-U] [-v] \n\
 
 	       case 'l':
 		 TEST_EXTRA_ARG(i, 'l');
-		 extract_limit = abs(strtoll(argv[i], 0, 10));
+		 extract_limit = Kumu::xabs(strtoll(argv[i], 0, 10));
 		 break;
 
 	       case 'p':
@@ -292,7 +292,7 @@ main(int argc, const char** argv)
 	      snprintf(filename_buf, 1024, "%s%010qu%s", this_prefix.c_str(), item_counter, Options.suffix.c_str());
 
 	      if ( Options.verbose_flag )
-		fprintf(stderr, "%s (%d bytes)\n", filename_buf, packet.ValueLength());
+		fprintf(stderr, "%s (%llu bytes)\n", filename_buf, packet.ValueLength());
 
 	      Kumu::FileWriter writer;
 	      writer.OpenWrite(filename_buf);

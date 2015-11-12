@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    JP2K.cpp
-    \version $Id: JP2K.cpp,v 1.10 2014/06/02 22:07:50 jhurst Exp $
+    \version $Id: JP2K.cpp,v 1.11 2015/10/07 16:41:23 jhurst Exp $
     \brief   JPEG 2000 parser implementation
 
     This is not a complete implementation of all things JP2K.  There is just enough here to
@@ -172,7 +172,7 @@ ASDCP::JP2K::Accessor::COD::Dump(FILE* stream) const
 
   fprintf(stream, "      ProgOrder: %s\n", prog_order_str);
   fprintf(stream, "         Layers: %hu\n", Layers());
-  fprintf(stream, "   DecompLevels: %hu\n", DecompLevels());
+  fprintf(stream, "   DecompLevels: %hhu\n", DecompLevels());
   fprintf(stream, " CodeBlockWidth: %d\n", 1 << CodeBlockWidth());
   fprintf(stream, "CodeBlockHeight: %d\n", 1 << CodeBlockHeight());
   fprintf(stream, " CodeBlockStyle: %d\n", CodeBlockStyle());
@@ -203,7 +203,7 @@ ASDCP::JP2K::Accessor::QCD::Dump(FILE* stream) const
   fprintf(stream, "QCD: \n");
   fprintf(stream, "QuantizationType: %s\n", GetQuantizationTypeString(QuantizationType()));
   fprintf(stream, "       GuardBits: %d\n", GuardBits());
-  fprintf(stream, "           SPqcd:\n", GuardBits());
+  fprintf(stream, "           SPqcd: %d\n", GuardBits());
   Kumu::hexdump(m_MarkerData, m_DataSize, stream);
 }
 

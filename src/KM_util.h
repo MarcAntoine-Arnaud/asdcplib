@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_util.h
-    \version $Id: KM_util.h,v 1.37 2015/02/19 19:06:57 jhurst Exp $
+    \version $Id: KM_util.h,v 1.39 2015/10/12 15:30:46 jhurst Exp $
     \brief   Utility functions
   */
 
@@ -36,7 +36,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <KM_error.h>
 #include <KM_tai.h>
 #include <string.h>
-#include <string>
 #include <list>
 
 namespace Kumu
@@ -531,7 +530,7 @@ namespace Kumu
     };
 
   inline void hexdump(const ByteString& buf, FILE* stream = 0) {
-    hexdump(buf.RoData(), buf.Length());
+    hexdump(buf.RoData(), buf.Length(), stream);
   }
 
   // Locates the first occurrence of the null-terminated string s2 in the string s1, where not more

@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-util.cpp
-    \version $Id: asdcp-util.cpp,v 1.2 2012/06/01 00:11:56 jhurst Exp $       
+    \version $Id: asdcp-util.cpp,v 1.3 2015/05/21 00:10:39 jhurst Exp $       
     \brief   Utility functions for working with AS-DCP files
 
   This program provides utility features commonly useful in DCP workflows.
@@ -79,7 +79,7 @@ USAGE: %s [-h|-help] [-V]\n\
        %s -d <input-file>\n\
 \n\
        %s -g | -u\n",
-	  PROGRAM_NAME, PROGRAM_NAME, PROGRAM_NAME, PROGRAM_NAME);
+	  PROGRAM_NAME, PROGRAM_NAME, PROGRAM_NAME);
 
   fprintf(stream, "\
 Major modes:\n\

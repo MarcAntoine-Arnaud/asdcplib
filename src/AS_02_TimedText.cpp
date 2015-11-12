@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_TimedText.cpp
-    \version $Id: AS_02_TimedText.cpp,v 1.2 2015/02/22 20:16:27 jhurst Exp $       
+    \version $Id: AS_02_TimedText.cpp,v 1.5 2015/10/09 23:41:11 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -96,7 +96,7 @@ AS_02::TimedText::MXFReader::h__Reader::MD_to_TimedText_TDesc(TimedTextDescripto
   TDesc.NamespaceName = TDescObj->NamespaceURI;
   TDesc.EncodingName = TDescObj->UCSEncoding;
 
-  Batch<Kumu::UUID>::const_iterator sdi = TDescObj->SubDescriptors.begin();
+  Array<Kumu::UUID>::const_iterator sdi = TDescObj->SubDescriptors.begin();
   TimedTextResourceSubDescriptor* DescObject = 0;
   Result_t result = RESULT_OK;
 
@@ -114,13 +114,17 @@ AS_02::TimedText::MXFReader::h__Reader::MD_to_TimedText_TDesc(TimedTextDescripto
 	  if ( DescObject->MIMEMediaType.find("application/x-font-opentype") != std::string::npos
 	       || DescObject->MIMEMediaType.find("application/x-opentype") != std::string::npos
 	       || DescObject->MIMEMediaType.find("font/opentype") != std::string::npos )
-	    TmpResource.Type = ASDCP::TimedText::MT_OPENTYPE;
-
+	    {
+	      TmpResource.Type = ASDCP::TimedText::MT_OPENTYPE;
+	    }
 	  else if ( DescObject->MIMEMediaType.find("image/png") != std::string::npos )
-	    TmpResource.Type = ASDCP::TimedText::MT_PNG;
-
+	    {
+	      TmpResource.Type = ASDCP::TimedText::MT_PNG;
+	    }
 	  else
-	    TmpResource.Type = ASDCP::TimedText::MT_BIN;
+	    {
+	      TmpResource.Type = ASDCP::TimedText::MT_BIN;
+	    }
 
 	  TDesc.ResourceList.push_back(TmpResource);
 	  m_ResourceMap.insert(ResourceMap_t::value_type(DescObject->AncillaryResourceID, *sdi));
@@ -199,8 +203,8 @@ AS_02::TimedText::MXFReader::h__Reader::ReadAncillaryResource(const Kumu::UUID& 
 
   if ( KM_SUCCESS(result) )
     {
-      Array<RIP::Pair>::const_iterator pi;
-      RIP::Pair TmpPair;
+      RIP::const_pair_iterator pi;
+      RIP::PartitionPair TmpPair;
       ui32_t sequence = 0;
 
       // Look up the partition start in the RIP using the SID.
@@ -598,7 +602,7 @@ AS_02::TimedText::MXFWriter::h__Writer::WriteAncillaryResource(const ASDCP::Time
   GSPart.BodySID = m_EssenceStreamID;
   GSPart.OperationalPattern = m_HeaderPart.OperationalPattern;
 
-  m_RIP.PairArray.push_back(RIP::Pair(m_EssenceStreamID++, here));
+  m_RIP.PairArray.push_back(RIP::PartitionPair(m_EssenceStreamID++, here));
   GSPart.EssenceContainers.push_back(UL(m_Dict->ul(MDD_TimedTextEssence)));
   UL TmpUL(m_Dict->ul(MDD_GenericStreamPartition));
   Result_t result = GSPart.WriteToFile(m_File, TmpUL);
@@ -626,7 +630,6 @@ AS_02::TimedText::MXFWriter::h__Writer::Finalize()
     }
 
   m_IndexWriter.m_Duration = m_FramesWritten = m_TDesc.ContainerDuration;
-  fprintf(stderr, "m_IndexWriter.m_Duration=%d\n", m_IndexWriter.m_Duration);
 
   Result_t result = m_State.Goto_FINAL();
 

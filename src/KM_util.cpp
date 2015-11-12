@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_util.cpp
-    \version $Id: KM_util.cpp,v 1.45 2015/02/19 19:06:56 jhurst Exp $
+    \version $Id: KM_util.cpp,v 1.47 2015/10/12 15:30:46 jhurst Exp $
     \brief   Utility functions
   */
 
@@ -129,10 +129,10 @@ Kumu::Result_t::Get(unsigned int i)
 }
 
 //
-Kumu::Result_t::Result_t(int v, const char* s, const char* l) : value(v), symbol(s), label(l)
+Kumu::Result_t::Result_t(int v, const std::string& s, const std::string& l) : value(v), symbol(s), label(l)
 {
-  assert(l);
-  assert(s);
+  assert(!l.empty());
+  assert(!s.empty());
 
   if ( v == 0 )
     return;
@@ -162,7 +162,64 @@ Kumu::Result_t::Result_t(int v, const char* s, const char* l) : value(v), symbol
   return;
 }
 
+
+Kumu::Result_t::Result_t(const Result_t& rhs)
+{
+  value = rhs.value;
+  symbol = rhs.symbol;
+  label = rhs.label;
+  message = rhs.message;
+}
+
 Kumu::Result_t::~Result_t() {}
+
+//
+const Kumu::Result_t&
+Kumu::Result_t::operator=(const Result_t& rhs)
+{
+  value = rhs.value;
+  symbol = rhs.symbol;
+  label = rhs.label;
+  message = rhs.message;
+  return *this;
+}
+
+//
+const Kumu::Result_t
+Kumu::Result_t::operator()(const std::string& message) const
+{
+  Result_t result = *this;
+  result.message = message;
+  return result;
+}
+
+static int const MESSAGE_BUF_MAX = 2048;
+
+//
+const Kumu::Result_t
+Kumu::Result_t::operator()(const int& line, const char* filename) const
+{
+  assert(filename);
+  char buf[MESSAGE_BUF_MAX];
+  snprintf(buf, MESSAGE_BUF_MAX-1, "%s, line %d", filename, line);
+
+  Result_t result = *this;
+  result.message = buf;
+  return result;
+}
+
+//
+const Kumu::Result_t
+Kumu::Result_t::operator()(const std::string& message, const int& line, const char* filename) const
+{
+  assert(filename);
+  char buf[MESSAGE_BUF_MAX];
+  snprintf(buf, MESSAGE_BUF_MAX-1, "%s, line %d", filename, line);
+
+  Result_t result = *this;
+  result.message = message + buf;
+  return result;
+}
 
 
 //------------------------------------------------------------------------------------------
@@ -796,8 +853,8 @@ Kumu::Timestamp::EncodeString(char* str_buf, ui32_t buf_len) const
       tmp_t.AddMinutes(m_TZOffsetMinutes);
       tmp_t.GetComponents(year, month, day, hour, minute, second);
 
-      ofst_hours = abs(m_TZOffsetMinutes) / 60;
-      ofst_minutes = abs(m_TZOffsetMinutes) % 60;
+      ofst_hours = Kumu::xabs(m_TZOffsetMinutes) / 60;
+      ofst_minutes = Kumu::xabs(m_TZOffsetMinutes) % 60;
 
       if ( m_TZOffsetMinutes < 0 )
 	direction = '-';
@@ -805,7 +862,7 @@ Kumu::Timestamp::EncodeString(char* str_buf, ui32_t buf_len) const
   
   // 2004-05-01T13:20:00+00:00
   snprintf(str_buf, buf_len,
-	   "%04hu-%02hu-%02huT%02hu:%02hu:%02hu%c%02hu:%02hu",
+	   "%04hu-%02hhu-%02hhuT%02hhu:%02hhu:%02hhu%c%02u:%02u",
 	   year, month, day, hour, minute, second,
 	   direction, ofst_hours, ofst_minutes);
 
@@ -1185,11 +1242,7 @@ Kumu::km_token_split(const std::string& str, const std::string& separator)
       r = strstr(pstr, separator.c_str());
     }
       
-  if ( strlen(pstr) >= 0 )
-    {
-      components.push_back(std::string(pstr));
-    }
-
+  components.push_back(std::string(pstr));
   return components;
 }
 

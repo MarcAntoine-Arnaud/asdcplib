@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2004-2013, John Hurst
+Copyright (c) 2004-2015, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    h__Writer.cpp
-    \version $Id: h__Writer.cpp,v 1.58 2014/08/07 18:51:20 jhurst Exp $
+    \version $Id: h__Writer.cpp,v 1.59 2015/10/09 23:41:11 jhurst Exp $
     \brief   MXF file writer base class
 */
 
@@ -106,7 +106,7 @@ ASDCP::h__ASDCPWriter::CreateBodyPart(const MXF::Rational& EditRate, ui32_t Byte
       m_BodyPart.BodySID = 1;
       UL OPAtomUL(m_Dict->ul(MDD_OPAtom));
       m_BodyPart.OperationalPattern = OPAtomUL;
-      m_RIP.PairArray.push_back(RIP::Pair(1, m_BodyPart.ThisPartition)); // Second RIP Entry
+      m_RIP.PairArray.push_back(RIP::PartitionPair(1, m_BodyPart.ThisPartition)); // Second RIP Entry
       
       UL BodyUL(m_Dict->ul(MDD_ClosedCompleteBodyPartition));
       result = m_BodyPart.WriteToFile(m_File, BodyUL);
@@ -146,11 +146,11 @@ ASDCP::h__ASDCPWriter::WriteASDCPHeader(const std::string& PackageLabel, const U
   // First RIP Entry
   if ( m_Info.LabelSetType == LS_MXF_SMPTE )  // ERK
     {
-      m_RIP.PairArray.push_back(RIP::Pair(0, 0)); // 3-part, no essence in header
+      m_RIP.PairArray.push_back(RIP::PartitionPair(0, 0)); // 3-part, no essence in header
     }
   else
     {
-      m_RIP.PairArray.push_back(RIP::Pair(1, 0)); // 2-part, essence in header
+      m_RIP.PairArray.push_back(RIP::PartitionPair(1, 0)); // 2-part, essence in header
     }
 
   // timecode rate and essence rate are the same
@@ -191,7 +191,7 @@ ASDCP::h__ASDCPWriter::WriteASDCPFooter()
   m_FooterPart.PreviousPartition = m_RIP.PairArray.back().ByteOffset;
 
   Kumu::fpos_t here = m_File.Tell();
-  m_RIP.PairArray.push_back(RIP::Pair(0, here)); // Last RIP Entry
+  m_RIP.PairArray.push_back(RIP::PartitionPair(0, here)); // Last RIP Entry
   m_HeaderPart.FooterPartition = here;
 
   assert(m_Dict);

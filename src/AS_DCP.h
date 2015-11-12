@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP.h
-    \version $Id: AS_DCP.h,v 1.51 2014/09/21 13:27:43 jhurst Exp $
+    \version $Id: AS_DCP.h,v 1.52 2015/04/21 03:55:31 jhurst Exp $
     \brief   AS-DCP library, public interface
 
 The asdcplib library is a set of file access objects that offer simplified
@@ -1485,6 +1485,7 @@ namespace ASDCP {
 
 	public:
 	  LocalFilenameResolver();
+	  virtual ~LocalFilenameResolver();
 	  Result_t OpenRead(const std::string& dirname);
 	  Result_t ResolveRID(const byte_t* uuid, FrameBuffer& FrameBuf) const;
 	};

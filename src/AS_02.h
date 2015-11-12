@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.18 2015/02/19 19:06:56 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.19 2015/03/21 05:26:06 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -333,6 +333,22 @@ namespace AS_02
       using ASDCP::TimedText::TimedTextResourceDescriptor;
       using ASDCP::TimedText::ResourceList_t;
 
+      //
+      class Type5UUIDFilenameResolver : public ASDCP::TimedText::IResourceResolver
+	{
+	  typedef std::map<Kumu::UUID, std::string> ResourceMap;
+	    
+	  ResourceMap m_ResourceMap;
+	  std::string m_Dirname;
+	  KM_NO_COPY_CONSTRUCT(Type5UUIDFilenameResolver);
+
+	public:
+	  Type5UUIDFilenameResolver();
+	  virtual ~Type5UUIDFilenameResolver();
+	  Result_t OpenRead(const std::string& dirname);
+	  Result_t ResolveRID(const byte_t* uuid, ASDCP::TimedText::FrameBuffer& FrameBuf) const;
+	};
+      
       //
       class ST2052_TextParser
 	{
