@@ -28,7 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*! \file    AS_02_PCM.cpp
-  \version $Id: AS_02_PCM.cpp,v 1.16 2015/10/07 16:41:23 jhurst Exp $       
+  \version $Id: AS_02_PCM.cpp,v 1.17 2016/03/09 20:05:25 jhurst Exp $       
   \brief   AS-02 library, PCM essence reader and writer implementation
 */
 
@@ -255,7 +255,7 @@ AS_02::PCM::MXFReader::RIP()
 // Open the file for reading. The file must exist. Returns error if the
 // operation cannot be completed.
 ASDCP::Result_t
-AS_02::PCM::MXFReader::OpenRead(const std::string& filename, const ASDCP::Rational& edit_rate)
+AS_02::PCM::MXFReader::OpenRead(const std::string& filename, const ASDCP::Rational& edit_rate) const
 {
   return m_Reader->OpenRead(filename, edit_rate);
 }
@@ -307,16 +307,19 @@ void
 AS_02::PCM::MXFReader::DumpHeaderMetadata(FILE* stream) const
 {
   if ( m_Reader && m_Reader->m_File.IsOpen() )
-    m_Reader->m_HeaderPart.Dump(stream);
+    {
+      m_Reader->m_HeaderPart.Dump(stream);
+    }
 }
-
 
 //
 void
 AS_02::PCM::MXFReader::DumpIndex(FILE* stream) const
 {
-  if ( m_Reader->m_File.IsOpen() )
-    m_Reader->m_IndexAccess.Dump(stream);
+  if ( m_Reader && m_Reader->m_File.IsOpen() )
+    {
+      m_Reader->m_IndexAccess.Dump(stream);
+    }
 }
 
 

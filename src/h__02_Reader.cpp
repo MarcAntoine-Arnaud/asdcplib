@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Reader.cpp
-  \version $Id: h__02_Reader.cpp,v 1.15 2015/10/12 15:30:46 jhurst Exp $
+  \version $Id: h__02_Reader.cpp,v 1.16 2016/03/09 20:05:26 jhurst Exp $
   \brief   MXF file reader base class
 */
 
@@ -228,8 +228,8 @@ AS_02::MXF::AS02IndexReader::InitFromFile(const Kumu::FileReader& reader, const 
       fprintf(stderr, "  EditUnitByteCount  = %u\n",  segment->EditUnitByteCount);
       fprintf(stderr, "  IndexSID           = %u\n",  segment->IndexSID);
       fprintf(stderr, "  BodySID            = %u\n",  segment->BodySID);
-      fprintf(stderr, "  SliceCount         = %hu\n", segment->SliceCount);
-      fprintf(stderr, "  PosTableCount      = %hu\n", segment->PosTableCount);
+      fprintf(stderr, "  SliceCount         = %hhu\n", segment->SliceCount);
+      fprintf(stderr, "  PosTableCount      = %hhu\n", segment->PosTableCount);
       fprintf(stderr, "  RtFileOffset       = %s\n",  i64sz(segment->RtFileOffset, identbuf));
       fprintf(stderr, "  RtEntryOffset      = %s\n",  i64sz(segment->RtEntryOffset, identbuf));
       fprintf(stderr, "  IndexEntryArray:\n");

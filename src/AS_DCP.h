@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP.h
-    \version $Id: AS_DCP.h,v 1.52 2015/04/21 03:55:31 jhurst Exp $
+    \version $Id: AS_DCP.h,v 1.53 2016/03/09 20:05:26 jhurst Exp $
     \brief   AS-DCP library, public interface
 
 The asdcplib library is a set of file access objects that offer simplified
@@ -222,6 +222,7 @@ namespace ASDCP {
     ESS_AS02_PCM_24b_96k,     // the file contains one or more PCM audio pairs, clip wrapped
     ESS_AS02_TIMED_TEXT,      // the file contains a TTML document and zero or more resources
 
+    ESS_ACES,                 // the file contains one ACES codestream
     ESS_MAX
   };
 
@@ -946,6 +947,8 @@ namespace ASDCP {
 	  // Reads the next sequential frame in the input file and places it in the
 	  // frame buffer. Fails if the buffer is too small or the stream is empty.
 	  Result_t ReadFrame(FrameBuffer&) const;
+
+	  Result_t Seek(ui32_t frame_number) const;
 	};
 
 

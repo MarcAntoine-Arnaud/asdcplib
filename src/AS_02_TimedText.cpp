@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2015, John Hurst
+Copyright (c) 2008-2016, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_TimedText.cpp
-    \version $Id: AS_02_TimedText.cpp,v 1.5 2015/10/09 23:41:11 jhurst Exp $       
+    \version $Id: AS_02_TimedText.cpp,v 1.6 2016/03/09 20:05:25 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -43,7 +43,7 @@ static std::string TIMED_TEXT_DEF_LABEL = "Timed Text Track";
 
 //------------------------------------------------------------------------------------------
 
-const char*
+static const char*
 MIME2str(TimedText::MIMEType_t m)
 {
   if ( m == TimedText::MT_PNG )

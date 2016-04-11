@@ -15,9 +15,9 @@
 @SET_MAKE@
 
 #
-# $Id: Makefile.am,v 1.83 2015/10/07 16:41:23 jhurst Exp $
+# $Id: Makefile.am,v 1.85 2016/03/17 23:58:13 mschroffel Exp $
 #
-# Copyright (c) 2007-2013 John Hurst. All rights reserved.
+# Copyright (c) 2007-2016 John Hurst. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -144,7 +144,8 @@ bin_PROGRAMS = asdcp-wrap$(EXEEXT) asdcp-unwrap$(EXEEXT) \
 	$(am__EXEEXT_1) $(am__EXEEXT_2)
 @USE_AS_02_TRUE@am__append_11 = \
 @USE_AS_02_TRUE@	as-02-wrap \
-@USE_AS_02_TRUE@	as-02-unwrap
+@USE_AS_02_TRUE@	as-02-unwrap \
+@USE_AS_02_TRUE@	as-02-info
 
 @USE_PHDR_TRUE@am__append_12 = \
 @USE_PHDR_TRUE@	phdr-wrap \
@@ -300,10 +301,15 @@ libpyasdcp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	-o $@
 @PYTHON_USE_TRUE@am_libpyasdcp_la_rpath = -rpath $(libdir)
 @USE_AS_02_TRUE@am__EXEEXT_1 = as-02-wrap$(EXEEXT) \
-@USE_AS_02_TRUE@	as-02-unwrap$(EXEEXT)
+@USE_AS_02_TRUE@	as-02-unwrap$(EXEEXT) as-02-info$(EXEEXT)
 @USE_PHDR_TRUE@am__EXEEXT_2 = phdr-wrap$(EXEEXT) phdr-unwrap$(EXEEXT)
 @DEV_HEADERS_TRUE@am__EXEEXT_3 = tt-xform$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
+am__as_02_info_SOURCES_DIST = as-02-info.cpp
+@USE_AS_02_TRUE@am_as_02_info_OBJECTS = as-02-info.$(OBJEXT)
+as_02_info_OBJECTS = $(am_as_02_info_OBJECTS)
+@USE_AS_02_TRUE@as_02_info_DEPENDENCIES = libas02.la libasdcp.la \
+@USE_AS_02_TRUE@	libkumu.la
 am__as_02_unwrap_SOURCES_DIST = as-02-unwrap.cpp
 @USE_AS_02_TRUE@am_as_02_unwrap_OBJECTS = as-02-unwrap.$(OBJEXT)
 as_02_unwrap_OBJECTS = $(am_as_02_unwrap_OBJECTS)
@@ -437,19 +443,20 @@ SOURCES = $(nodist_asdcp_la_SOURCES) $(nodist_kumu_la_SOURCES) \
 	$(libas02_la_SOURCES) $(libasdcp_la_SOURCES) \
 	$(nodist_libasdcp_la_SOURCES) $(libkumu_la_SOURCES) \
 	$(libphdr_la_SOURCES) $(nodist_libpyasdcp_la_SOURCES) \
-	$(as_02_unwrap_SOURCES) $(as_02_wrap_SOURCES) \
-	$(asdcp_info_SOURCES) $(asdcp_mem_test_SOURCES) \
-	$(asdcp_test_SOURCES) $(asdcp_unwrap_SOURCES) \
-	$(asdcp_util_SOURCES) $(asdcp_version_SOURCES) \
-	$(asdcp_wrap_SOURCES) $(blackwave_SOURCES) \
-	$(fips_186_rng_test_SOURCES) $(j2c_test_SOURCES) \
-	$(klvsplit_SOURCES) $(klvwalk_SOURCES) $(kmfilegen_SOURCES) \
-	$(kmrandgen_SOURCES) $(kmuuidgen_SOURCES) $(path_test_SOURCES) \
-	$(phdr_unwrap_SOURCES) $(phdr_wrap_SOURCES) \
-	$(pinkwave_SOURCES) $(nodist_tt_xform_SOURCES) \
-	$(wavesplit_SOURCES)
+	$(as_02_info_SOURCES) $(as_02_unwrap_SOURCES) \
+	$(as_02_wrap_SOURCES) $(asdcp_info_SOURCES) \
+	$(asdcp_mem_test_SOURCES) $(asdcp_test_SOURCES) \
+	$(asdcp_unwrap_SOURCES) $(asdcp_util_SOURCES) \
+	$(asdcp_version_SOURCES) $(asdcp_wrap_SOURCES) \
+	$(blackwave_SOURCES) $(fips_186_rng_test_SOURCES) \
+	$(j2c_test_SOURCES) $(klvsplit_SOURCES) $(klvwalk_SOURCES) \
+	$(kmfilegen_SOURCES) $(kmrandgen_SOURCES) $(kmuuidgen_SOURCES) \
+	$(path_test_SOURCES) $(phdr_unwrap_SOURCES) \
+	$(phdr_wrap_SOURCES) $(pinkwave_SOURCES) \
+	$(nodist_tt_xform_SOURCES) $(wavesplit_SOURCES)
 DIST_SOURCES = $(am__libas02_la_SOURCES_DIST) $(libasdcp_la_SOURCES) \
 	$(libkumu_la_SOURCES) $(am__libphdr_la_SOURCES_DIST) \
+	$(am__as_02_info_SOURCES_DIST) \
 	$(am__as_02_unwrap_SOURCES_DIST) \
 	$(am__as_02_wrap_SOURCES_DIST) $(asdcp_info_SOURCES) \
 	$(asdcp_mem_test_SOURCES) $(asdcp_test_SOURCES) \
@@ -949,6 +956,8 @@ klvsplit_LDADD = libasdcp.la libkumu.la
 @USE_AS_02_TRUE@as_02_wrap_LDADD = libas02.la libasdcp.la libkumu.la
 @USE_AS_02_TRUE@as_02_unwrap_SOURCES = as-02-unwrap.cpp
 @USE_AS_02_TRUE@as_02_unwrap_LDADD = libas02.la libasdcp.la libkumu.la
+@USE_AS_02_TRUE@as_02_info_SOURCES = as-02-info.cpp
+@USE_AS_02_TRUE@as_02_info_LDADD = libas02.la libasdcp.la libkumu.la
 @USE_PHDR_TRUE@phdr_wrap_SOURCES = phdr-wrap.cpp
 @USE_PHDR_TRUE@phdr_wrap_LDADD = libphdr.la libas02.la libasdcp.la libkumu.la
 @USE_PHDR_TRUE@phdr_unwrap_SOURCES = phdr-unwrap.cpp
@@ -980,8 +989,8 @@ TESTS_ENVIRONMENT = BUILD_DIR="." TEST_FILES=../tests TEST_FILE_PREFIX=DCPd1-M1 
 
 
 # files to include in the distribution that automake doesn't automatically include
-EXTRA_DIST = fips-186-test-harness.pl $(TESTS) $(am__append_14) \
-	$(am__append_15)
+EXTRA_DIST = fips-186-test-harness.pl $(TESTS) ../CMakeLists.txt \
+	$(am__append_14) $(am__append_15)
 
 # source files that are themselves built
 BUILT_SOURCES = Metadata.h Metadata.cpp MDD.h MDD.cpp
@@ -1172,6 +1181,10 @@ clean-checkPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
+as-02-info$(EXEEXT): $(as_02_info_OBJECTS) $(as_02_info_DEPENDENCIES) $(EXTRA_as_02_info_DEPENDENCIES) 
+	@rm -f as-02-info$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(as_02_info_OBJECTS) $(as_02_info_LDADD) $(LIBS)
+
 as-02-unwrap$(EXEEXT): $(as_02_unwrap_OBJECTS) $(as_02_unwrap_DEPENDENCIES) $(EXTRA_as_02_unwrap_DEPENDENCIES) 
 	@rm -f as-02-unwrap$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(as_02_unwrap_OBJECTS) $(as_02_unwrap_LDADD) $(LIBS)
@@ -1276,6 +1289,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_tai.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/KM_xml.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/as-02-info.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/as-02-unwrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/as-02-wrap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/asdcp-info.Po@am__quote@

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2014, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.19 2015/03/21 05:26:06 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.20 2016/03/09 20:05:25 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -301,7 +301,7 @@ namespace AS_02
 
       // Open the file for reading. The file must exist. Returns error if the
       // operation cannot be completed.
-      Result_t OpenRead(const std::string& filename, const ASDCP::Rational& EditRate);
+      Result_t OpenRead(const std::string& filename, const ASDCP::Rational& EditRate) const;
 
       // Returns RESULT_INIT if the file is not open.
       Result_t Close() const;

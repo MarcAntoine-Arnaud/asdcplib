@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-unwrap.cpp
-    \version $Id: as-02-unwrap.cpp,v 1.13 2015/10/07 16:41:23 jhurst Exp $       
+    \version $Id: as-02-unwrap.cpp,v 1.14 2016/03/09 20:05:26 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program extracts picture and sound from AS-02 files.
@@ -469,6 +469,20 @@ read_PCM_file(CommandOptions& Options)
 	  else
 	    {
 	      last_frame = wave_descriptor->ContainerDuration;
+	    }
+
+	  if ( last_frame == 0 )
+	    {
+	      fprintf(stderr, "ContainerDuration not set in index, attempting to use Duration from SourceClip.\n");
+	      result = Reader.OP1aHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_SourceClip), &tmp_obj);
+	      if ( KM_SUCCESS(result))
+		{
+	    	  ASDCP::MXF::SourceClip *sourceClip = dynamic_cast<ASDCP::MXF::SourceClip*>(tmp_obj);
+	    	  if ( ! sourceClip->Duration.empty() )
+		    {
+		      last_frame = sourceClip->Duration;
+		    }
+		}
 	    }
 
 	  if ( last_frame == 0 )

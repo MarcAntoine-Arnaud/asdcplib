@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.h
-    \version $Id: MXF.h,v 1.57 2015/10/10 20:26:29 jhurst Exp $
+    \version $Id: MXF.h,v 1.58 2016/03/09 20:05:26 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -185,7 +185,17 @@ namespace ASDCP
 	    LocalTagEntry(const TagValue& tag, ASDCP::UL& ul) : Tag(tag), UL(ul) {}
 
 	      bool operator<(const LocalTagEntry& rhs) const {
-		return ( ( Tag.a < rhs.Tag.a ) || ( Tag.b < rhs.Tag.b ) );
+		if ( Tag.a < rhs.Tag.a )
+		  {
+		    return true;
+		  }
+		
+		if ( Tag.a == rhs.Tag.a && Tag.b < rhs.Tag.b )
+		  {
+		    return true;
+		  }
+
+		return false;
 	      }
 
 	      inline const char* EncodeString(char* str_buf, ui32_t buf_len) const {

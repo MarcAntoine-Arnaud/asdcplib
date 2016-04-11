@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02_JP2K.cpp
-  \version $Id: AS_02_JP2K.cpp,v 1.14 2014/09/21 13:27:43 jhurst Exp $
+  \version $Id: AS_02_JP2K.cpp,v 1.15 2016/03/09 20:05:25 jhurst Exp $
   \brief   AS-02 library, JPEG 2000 essence reader and writer implementation
 */
 
@@ -223,6 +223,26 @@ AS_02::JP2K::MXFReader::FillWriterInfo(WriterInfo& Info) const
   return RESULT_INIT;
 }
 
+//
+void
+AS_02::JP2K::MXFReader::DumpHeaderMetadata(FILE* stream) const
+{
+  if ( m_Reader && m_Reader->m_File.IsOpen() )
+    {
+      m_Reader->m_HeaderPart.Dump(stream);
+    }
+}
+
+
+//
+void
+AS_02::JP2K::MXFReader::DumpIndex(FILE* stream) const
+{
+  if ( m_Reader && m_Reader->m_File.IsOpen() )
+    {
+      m_Reader->m_IndexAccess.Dump(stream);
+    }
+}
 
 //------------------------------------------------------------------------------------------
 
