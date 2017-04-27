@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-wrap.cpp
-    \version $Id: as-02-wrap.cpp,v 1.22 2015/10/16 16:55:33 jhurst Exp $       
+    \version $Id: as-02-wrap.cpp,v 1.28 2016/12/10 19:57:45 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program wraps IMF essence (picture or sound) in to an AS-02 MXF file.
@@ -46,15 +46,13 @@ using namespace ASDCP;
 
 const ui32_t FRAME_BUFFER_SIZE = 4 * Kumu::Megabyte;
 const ASDCP::Dictionary *g_dict = 0;
-
-
+ 
 const char*
 RationalToString(const ASDCP::Rational& r, char* buf, const ui32_t& len)
 {
   snprintf(buf, len, "%d/%d", r.Numerator, r.Denominator);
   return buf;
 }
-
 
 
 //------------------------------------------------------------------------------------------
@@ -107,7 +105,7 @@ banner(FILE* stream = stdout)
 {
   fprintf(stream, "\n\
 %s (asdcplib %s)\n\n\
-Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS, John Hurst\n\n\
 asdcplib may be copied only under the terms of the license found at\n\
 the top of every file in the asdcplib distribution kit.\n\n\
 Specify the -h (help) option for further information about %s\n\n",
@@ -121,11 +119,7 @@ usage(FILE* stream = stdout)
   fprintf(stream, "\
 USAGE: %s [-h|-help] [-V]\n\
 \n\
-       %s [-a <uuid>] [-A <w>/<h>] [-b <buffer-size>] [-C <UL>] [-d <duration>]\n\
-            [-D <depth>] [-e|-E] [-i] [-j <key-id-string>] [-k <key-string>]\n\
-            [-M] [-m <expr>] [-p <ul>] [-r <n>/<d>] [-R] [-s <seconds>]\n\
-            [-t <min>] [-T <max>] [-u] [-v] [-W] [-x <int>] [-X <int>] [-Y]\n\
-            [-z|-Z] <input-file>+ <output-file>\n\n",
+       %s [options] <input-file>+ <output-file>\n\n",
 	  PROGRAM_NAME, PROGRAM_NAME);
 
   fprintf(stream, "\
@@ -145,9 +139,17 @@ Options:\n\
   -i                - Indicates input essence is interlaced fields (forces -Y)\n\
   -j <key-id-str>   - Write key ID instead of creating a random value\n\
   -k <key-string>   - Use key for ciphertext operations\n\
+  -l <first>,<second>\n\
+                    - Integer values that set the VideoLineMap when creating\n\
+                      interlaced YCbCr files\n\
   -M                - Do not create HMAC values when writing\n\
   -m <expr>         - Write MCA labels using <expr>.  Example:\n\
                         51(L,R,C,LFE,Ls,Rs,),HI,VIN\n\
+  -o <min>,<max>    - Mastering Display luminance, cd*m*m, e.g., \".05,100\"\n\
+  -O <rx>,<ry>,<gx>,<gy>,<bx>,<by>,<wx>,<wy>\n\
+                    - Mastering Display Color Primaries and white point\n\
+                      e.g., \".64,.33,.3,.6,.15,.06,.3457,.3585\"\n\
+  -P <string>       - Set NamespaceURI property when creating timed text MXF\n\
   -p <ul>           - Set broadcast profile\n\
   -r <n>/<d>        - Edit Rate of the output file.  24/1 is the default\n\
   -R                - Indicates RGB image essence (default)\n\
@@ -159,7 +161,12 @@ Options:\n\
   -W                - Read input file only, do not write source file\n\
   -x <int>          - Horizontal subsampling degree (default: 2)\n\
   -X <int>          - Vertical subsampling degree (default: 2)\n\
-  -Y                - Indicates YCbCr image essence (default: RGB)\n\
+  -Y                - Indicates YCbCr image essence (default: RGB), uses\n\
+                      default values for White Ref, Black Ref and Color Range,\n\
+                       940,64,897, indicating 10 bit standard Video Range\n\
+  -y <white-ref>[,<black-ref>[,<color-range>]]\n\
+                    - Same as -Y but White Ref, Black Ref and Color Range are\n\
+                      set from the given argument\n\
   -z                - Fail if j2c inputs have unequal parameters (default)\n\
   -Z                - Ignore unequal parameters in j2c inputs\n\
 \n\
@@ -167,8 +174,45 @@ Options:\n\
          o All option arguments must be separated from the option by whitespace.\n\n");
 }
 
-
+const float chromaticity_scale = 50000.0;
 //
+ui32_t
+set_primary_from_token(const std::string& token, ui16_t& primary)
+{
+  float raw_value = strtod(token.c_str(),0);
+
+  if ( raw_value == 0.0 || raw_value > 1.0 )
+    {
+      fprintf(stderr, "Invalid coordinate value \"%s\".\n", token.c_str());
+      return false;
+    }
+
+  primary = floor(0.5 + ( raw_value * chromaticity_scale ));
+  return true;
+}
+
+const float luminance_scale = 10000.0;
+//
+ui32_t
+set_luminance_from_token(const std::string& token, ui32_t& luminance)
+{
+  float raw_value = strtod(token.c_str(),0);
+
+  if ( raw_value == 0.0 || raw_value > 400000.0 )
+    {
+      fprintf(stderr, "Invalid luminance value \"%s\".\n", token.c_str());
+      return false;
+    }
+
+  luminance = floor(0.5 + ( raw_value * luminance_scale ));
+  return true;
+}
+
+#define SET_LUMINANCE(p,t)			\
+  if ( ! set_luminance_from_token(t, p) ) {	\
+    return false;				\
+  }
+
 //
 class CommandOptions
 {
@@ -194,7 +238,6 @@ public:
   bool   key_id_flag;    // true if a key ID was given
   byte_t key_id_value[UUIDlen];// value of given key ID (when key_id_flag is true)
   byte_t asset_id_value[UUIDlen];// value of asset ID (when asset_id_flag is true)
-  std::string out_file; //
   bool show_ul_values_flag;    /// if true, dump the UL table before going tp work.
   Kumu::PathList_t filenames;  // list of filenames to be processed
 
@@ -212,22 +255,120 @@ public:
   ASDCP::Rational aspect_ratio;
   ui8_t field_dominance;
   ui32_t mxf_header_size;
+  ui32_t cdci_BlackRefLevel; 
+  ui32_t cdci_WhiteRefLevel;
+  ui32_t cdci_ColorRange;
+
+  ui32_t md_min_luminance, md_max_luminance;
+  ASDCP::MXF::ThreeColorPrimaries md_primaries;
+  ASDCP::MXF::ColorPrimary md_white_point;
 
   //new attributes for AS-02 support 
   AS_02::IndexStrategy_t index_strategy; //Shim parameter index_strategy_frame/clip
   ui32_t partition_space; //Shim parameter partition_spacing
 
   //
+  MXF::LineMapPair line_map;
+  std::string out_file, profile_name; //
+
+  //
+  bool set_video_line_map(const std::string& arg)
+  {
+    const char* sep_str = strrchr(arg.c_str(), ',');
+
+    if ( sep_str == 0 )
+      {
+	fprintf(stderr, "Expecting <first>,<second>\n");
+	return false;
+      }
+
+    line_map.First = Kumu::xabs(strtol(arg.c_str(), 0, 10));
+    line_map.Second = Kumu::xabs(strtol(sep_str+1, 0, 10));
+    return true;
+  }
+
+  //
+  bool set_video_ref(const std::string& arg)
+  {
+    std::list<std::string> ref_tokens = Kumu::km_token_split(arg, ",");
+
+    switch ( ref_tokens.size() )
+      {
+      case 3:
+	cdci_ColorRange = Kumu::xabs(strtol(ref_tokens.back().c_str(), 0, 10));
+	ref_tokens.pop_back();
+      case 2:
+	cdci_BlackRefLevel = Kumu::xabs(strtol(ref_tokens.back().c_str(), 0, 10));
+	ref_tokens.pop_back();
+      case 1:
+	cdci_WhiteRefLevel = Kumu::xabs(strtol(ref_tokens.back().c_str(), 0, 10));
+	break;
+
+      default:
+	fprintf(stderr, "Expecting <white-ref>[,<black-ref>[,<color-range>]]\n");
+	return false;
+      }
+
+    if ( cdci_WhiteRefLevel > 65535 || cdci_BlackRefLevel > 65535 || cdci_ColorRange > 65535 )
+      {
+	fprintf(stderr, "Unexpected CDCI video referece levels.\n");
+	return false;
+      }
+
+    return true;
+  }
+
+  //
+  bool set_display_primaries(const std::string& arg)
+  {
+    std::list<std::string> coordinate_tokens = Kumu::km_token_split(arg, ",");
+    if ( coordinate_tokens.size() != 8 )
+      {
+	fprintf(stderr, "Expecting four coordinate pairs.\n");
+	return false;
+      }
+
+    std::list<std::string>::const_iterator i = coordinate_tokens.begin();
+    if ( ! set_primary_from_token(*(i++), md_primaries.First.X) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_primaries.First.Y) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_primaries.Second.X) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_primaries.Second.Y) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_primaries.Third.X) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_primaries.Third.Y) ) return false;
+    if ( ! set_primary_from_token(*(i++), md_white_point.X) ) return false;
+    if ( ! set_primary_from_token(*i, md_white_point.Y) ) return false;
+
+    return true;
+  }
+
+  //
+  bool set_display_luminance(const std::string& arg)
+  {
+    std::list<std::string> luminance_tokens = Kumu::km_token_split(arg, ",");
+    if ( luminance_tokens.size() != 2 )
+      {
+	fprintf(stderr, "Expecting a luminance pair.\n");
+	return false;
+      }
+
+    if ( ! set_luminance_from_token(luminance_tokens.front(), md_min_luminance) ) return false;
+    if ( ! set_luminance_from_token(luminance_tokens.back(), md_max_luminance) ) return false;
+
+    return true;
+  }
+
   CommandOptions(int argc, const char** argv) :
     error_flag(true), key_flag(false), key_id_flag(false), asset_id_flag(false),
     encrypt_header_flag(true), write_hmac(true), verbose_flag(false), fb_dump_size(0),
     no_write_flag(false), version_flag(false), help_flag(false),
-    duration(0xffffffff), j2c_pedantic(true), use_cdci_descriptor(false), edit_rate(24,1), fb_size(FRAME_BUFFER_SIZE),
+    duration(0xffffffff), j2c_pedantic(true), use_cdci_descriptor(false),
+    edit_rate(24,1), fb_size(FRAME_BUFFER_SIZE),
     show_ul_values_flag(false), index_strategy(AS_02::IS_FOLLOW), partition_space(60),
     mca_config(g_dict), rgba_MaxRef(1023), rgba_MinRef(0),
     horizontal_subsampling(2), vertical_subsampling(2), component_depth(10),
     frame_layout(0), aspect_ratio(ASDCP::Rational(4,3)), field_dominance(0),
-    mxf_header_size(16384)
+    mxf_header_size(16384), cdci_WhiteRefLevel(940), cdci_BlackRefLevel(64), cdci_ColorRange(897),
+    md_min_luminance(0), md_max_luminance(0), line_map(0,0)
   {
     memset(key_value, 0, KeyLen);
     memset(key_id_value, 0, UUIDlen);
@@ -279,7 +420,6 @@ public:
 		  fprintf(stderr, "Frame Buffer size: %u bytes.\n", fb_size);
 
 		break;
-
 	      case 'C':
 		TEST_EXTRA_ARG(i, 'C');
 		if ( ! channel_assignment.DecodeHex(argv[i]) )
@@ -348,6 +488,14 @@ public:
 		}
 		break;
 
+	      case 'l':
+		TEST_EXTRA_ARG(i, 'y');
+		if ( ! set_video_line_map(argv[i]) )
+		  {
+		    return;
+		  }
+		break;
+
 	      case 'M': write_hmac = false; break;
 
 	      case 'm':
@@ -356,6 +504,27 @@ public:
 		  {
 		    return;
 		  }
+		break;
+
+	      case 'O':
+		TEST_EXTRA_ARG(i, ')');
+		if ( ! set_display_primaries(argv[i]) )
+		  {
+		    return;
+		  }
+		break;
+
+	      case 'o':
+		TEST_EXTRA_ARG(i, 'o');
+		if ( ! set_display_luminance(argv[i]) )
+		  {
+		    return;
+		  }
+		break;
+
+	      case 'P':
+		TEST_EXTRA_ARG(i, 'P');
+		profile_name = argv[i];
 		break;
 
 	      case 'p':
@@ -397,6 +566,7 @@ public:
 		break;
 
 	      case 'u': show_ul_values_flag = true; break;
+
 	      case 'V': version_flag = true; break;
 	      case 'v': verbose_flag = true; break;
 	      case 'W': no_write_flag = true; break;
@@ -413,6 +583,17 @@ public:
 
 	      case 'Y':
 		use_cdci_descriptor = true;
+		// default 10 bit video range YUV, ref levels already set
+		break;
+
+	      case 'y':
+		// Use values provded as argument, sharp tool, be careful
+		use_cdci_descriptor = true;
+		TEST_EXTRA_ARG(i, 'y');
+		if ( ! set_video_ref(argv[i]) )
+		  {
+		    return;
+		  }
 		break;
 
 	      case 'Z': j2c_pedantic = false; break;
@@ -524,6 +705,23 @@ write_JP2K_file(CommandOptions& Options)
 	      tmp_dscr->FrameLayout = Options.frame_layout;
 	      tmp_dscr->AspectRatio = Options.aspect_ratio;
 	      tmp_dscr->FieldDominance = Options.field_dominance;
+	      tmp_dscr->WhiteReflevel = Options.cdci_WhiteRefLevel;
+	      tmp_dscr->BlackRefLevel = Options.cdci_BlackRefLevel;
+	      tmp_dscr->ColorRange = Options.cdci_ColorRange;
+	      tmp_dscr->VideoLineMap = Options.line_map;
+
+	      if ( Options.md_min_luminance || Options.md_max_luminance )
+		{
+		  tmp_dscr->MasteringDisplayMinimumLuminance = Options.md_min_luminance;
+		  tmp_dscr->MasteringDisplayMaximumLuminance = Options.md_max_luminance;
+		}
+
+	      if ( Options.md_primaries.HasValue() )
+		{
+		  tmp_dscr->MasteringDisplayPrimaries = Options.md_primaries;
+		  tmp_dscr->MasteringDisplayWhitePointChromaticity = Options.md_white_point;
+		}
+
 	      essence_descriptor = static_cast<ASDCP::MXF::FileDescriptor*>(tmp_dscr);
 	    }
 	}
@@ -538,9 +736,22 @@ write_JP2K_file(CommandOptions& Options)
 
 	  if ( ASDCP_SUCCESS(result) )
 	    {
-	      tmp_dscr->PictureEssenceCoding = UL(g_dict->ul(MDD_JP2KEssenceCompression_BroadcastProfile_1));
+	      tmp_dscr->PictureEssenceCoding = Options.picture_coding;
 	      tmp_dscr->ComponentMaxRef = Options.rgba_MaxRef;
 	      tmp_dscr->ComponentMinRef = Options.rgba_MinRef;
+
+	      if ( Options.md_min_luminance || Options.md_max_luminance )
+		{
+		  tmp_dscr->MasteringDisplayMinimumLuminance = Options.md_min_luminance;
+		  tmp_dscr->MasteringDisplayMaximumLuminance = Options.md_max_luminance;
+		}
+
+	      if ( Options.md_primaries.HasValue() )
+		{
+		  tmp_dscr->MasteringDisplayPrimaries = Options.md_primaries;
+		  tmp_dscr->MasteringDisplayWhitePointChromaticity = Options.md_white_point;
+		}
+
 	      essence_descriptor = static_cast<ASDCP::MXF::FileDescriptor*>(tmp_dscr);
 	    }
 	}
@@ -804,7 +1015,8 @@ write_timed_text_file(CommandOptions& Options)
   Kumu::FortunaRNG  RNG;
 
   // set up essence parser
-  Result_t result = Parser.OpenRead(Options.filenames.front().c_str());
+  Result_t result = Parser.OpenRead(Options.filenames.front().c_str(),
+				    Options.profile_name);
 
   // set up MXF writer
   if ( ASDCP_SUCCESS(result) )
@@ -907,6 +1119,7 @@ write_timed_text_file(CommandOptions& Options)
   return result;
 }
 
+
 //
 int
 main(int argc, const char** argv)
@@ -959,7 +1172,7 @@ main(int argc, const char** argv)
 	  break;
 
 	default:
-	  fprintf(stderr, "%s: Unknown file type, not ASDCP-compatible essence.\n",
+	  fprintf(stderr, "%s: Unknown file type, not AS-02-compatible essence.\n",
 		  Options.filenames.front().c_str());
 	  return 5;
 	}

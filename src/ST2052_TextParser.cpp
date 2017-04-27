@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    ST2052_TimedText.cpp
-    \version $Id: ST2052_TextParser.cpp,v 1.5 2016/03/02 18:57:41 jhurst Exp $       
+    \version $Id: ST2052_TextParser.cpp,v 1.8 2016/12/07 18:11:32 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -86,15 +86,15 @@ create_4122_type5_id(const std::string& subject_name, const byte_t* ns_id)
 }
 
 //
-static Kumu::UUID
-create_png_name_id(const std::string& image_name)
+Kumu::UUID
+AS_02::TimedText::CreatePNGNameId(const std::string& image_name)
 {
   return create_4122_type5_id(image_name, s_png_id_prefix);
 }
 
 //
-static Kumu::UUID
-create_font_name_id(const std::string& font_name)
+Kumu::UUID
+AS_02::TimedText::CreateFontNameId(const std::string& font_name)
 {
   return create_4122_type5_id(font_name, s_font_id_prefix);
 }
@@ -106,6 +106,7 @@ static std::set<std::string> sg_default_font_family_list;
 static void
 setup_default_font_family_list()
 {
+  AutoMutex l(sg_default_font_family_list_lock);
   sg_default_font_family_list.insert("default");
   sg_default_font_family_list.insert("monospace");
   sg_default_font_family_list.insert("sansSerif");
@@ -166,7 +167,7 @@ AS_02::TimedText::Type5UUIDFilenameResolver::OpenRead(const std::string& dirname
 		  // is it PNG?
 		  if ( memcmp(read_buffer, PNGMagic, sizeof(PNGMagic)) == 0 )
 		    {
-		      UUID asset_id = create_png_name_id(next_item);
+		      UUID asset_id = CreatePNGNameId(PathBasename(next_item));
 		      m_ResourceMap.insert(ResourceMap::value_type(asset_id, next_item));
 		    }
 		  // is it a font?
@@ -174,7 +175,7 @@ AS_02::TimedText::Type5UUIDFilenameResolver::OpenRead(const std::string& dirname
 			    || memcmp(read_buffer, TrueTypeMagic, sizeof(TrueTypeMagic)) == 0 )
 		    {
 		      std::string font_root_name = PathSetExtension(next_item, "");
-		      UUID asset_id = create_font_name_id(font_root_name);
+		      UUID asset_id = CreateFontNameId(PathBasename(font_root_name));
 		      m_ResourceMap.insert(ResourceMap::value_type(asset_id, next_item));
 		    }
 		}
@@ -229,7 +230,7 @@ class AS_02::TimedText::ST2052_TextParser::h__TextParser
 {
   XMLElement  m_Root;
   ResourceTypeMap_t m_ResourceTypes;
-  Result_t OpenRead();
+  Result_t OpenRead(const std::string& profile_name);
 
   ASDCP_NO_COPY_CONSTRUCT(h__TextParser);
 
@@ -258,22 +259,22 @@ public:
     return m_DefaultResolver;
   }
 
-  Result_t OpenRead(const std::string& filename);
-  Result_t OpenRead(const std::string& xml_doc, const std::string& filename);
+  Result_t OpenRead(const std::string& filename, const std::string& profile_name);
+  Result_t OpenRead(const std::string& xml_doc, const std::string& filename, const std::string& profile_name);
   Result_t ReadAncillaryResource(const byte_t *uuid, ASDCP::TimedText::FrameBuffer& FrameBuf,
 				 const ASDCP::TimedText::IResourceResolver& Resolver) const;
 };
 
 //
 Result_t
-AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& filename)
+AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& filename, const std::string& profile_name)
 {
   Result_t result = ReadFileIntoString(filename, m_XMLDoc);
 
   if ( KM_SUCCESS(result) )
     {
       m_Filename = filename;
-      result = OpenRead();
+      result = OpenRead(profile_name);
     }
 
   return result;
@@ -281,66 +282,22 @@ AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& 
 
 //
 Result_t
-AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& xml_doc, const std::string& filename)
+AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& xml_doc, const std::string& filename,
+							     const std::string& profile_name)
 {
   m_XMLDoc = xml_doc;
   m_Filename = filename;
-  return OpenRead();
+  return OpenRead(profile_name);
 }
 
-//
-template <class VisitorType>
-bool
-apply_visitor(const XMLElement& element, VisitorType& visitor)
-{
-  const ElementList& l = element.GetChildren();
-  ElementList::const_iterator i;
 
-  for ( i = l.begin(); i != l.end(); ++i )
-    {
-      if ( ! visitor.Element(**i) )
-	{
-	  return false;
-	}
 
-      if ( ! apply_visitor(**i, visitor) )
-	{
-	  return false;
-	}
-    }
-
-  return true;
-}
-
-//
-class AttributeVisitor
-{
-  std::string attr_name;
-
-public:
-  AttributeVisitor(const std::string& n) : attr_name(n) {}
-  std::set<std::string> value_list;
-
-  bool Element(const XMLElement& e)
-  {
-    const AttributeList& l = e.GetAttributes();
-    AttributeList::const_iterator i;
- 
-    for ( i = l.begin(); i != l.end(); ++i )
-      {
-	if ( i->name == attr_name )
-	  {
-	    value_list.insert(i->value);
-	  }
-      }
-
-    return true;
-  }
-};
+std::string const IMSC1_imageProfile = "http://www.w3.org/ns/ttml/profile/imsc1/image";
+std::string const IMSC1_textProfile = "http://www.w3.org/ns/ttml/profile/imsc1/text";
 
 //
 Result_t
-AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead()
+AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead(const std::string& profile_name)
 {
   setup_default_font_family_list();
 
@@ -353,40 +310,83 @@ AS_02::TimedText::ST2052_TextParser::h__TextParser::OpenRead()
   m_TDesc.EncodingName = "UTF-8"; // the XML parser demands UTF-8
   m_TDesc.ResourceList.clear();
   m_TDesc.ContainerDuration = 0;
-  const XMLNamespace* ns = m_Root.Namespace();
+  m_TDesc.NamespaceName = profile_name; // set the profile explicitly
+  std::set<std::string>::const_iterator i;
 
-  if ( ns == 0 )
+  // Attempt to set the profile from <conformsToStandard>
+  if ( m_TDesc.NamespaceName.empty() )
     {
-      DefaultLogSink(). Warn("Document has no namespace name, assuming %s\n", c_tt_namespace_name);
-      m_TDesc.NamespaceName = c_tt_namespace_name;
-    }
-  else
-    {
-      m_TDesc.NamespaceName = ns->Name();
+      ElementVisitor conforms_visitor("conformsToStandard");
+      apply_visitor(m_Root, conforms_visitor);
+
+      for ( i = conforms_visitor.value_list.begin(); i != conforms_visitor.value_list.end(); ++i )
+	{
+	  if ( *i == IMSC1_imageProfile || *i == IMSC1_textProfile )
+	    {
+	      m_TDesc.NamespaceName = *i;
+	      break;
+	    }
+	}
     }
 
+  // Attempt to set the profile from the use of attribute "profile"
+  if ( m_TDesc.NamespaceName.empty() )
+    {
+      AttributeVisitor profile_visitor("profile");
+      apply_visitor(m_Root, profile_visitor);
+
+      for ( i = profile_visitor.value_list.begin(); i != profile_visitor.value_list.end(); ++i )
+	{
+	  if ( *i == IMSC1_imageProfile || *i == IMSC1_textProfile )
+	    {
+	      m_TDesc.NamespaceName = *i;
+	      break;
+	    }
+	}
+    }
+
+  // Find image resources for later packaging as GS partitions.
+  // Attempt to set the profile; infer from use of images.
   AttributeVisitor png_visitor("backgroundImage");
   apply_visitor(m_Root, png_visitor);
-  std::set<std::string>::const_iterator i;
 
   for ( i = png_visitor.value_list.begin(); i != png_visitor.value_list.end(); ++i )
     {
-      UUID asset_id = create_png_name_id(*i);
+      UUID asset_id = CreatePNGNameId(PathBasename(*i));
       TimedTextResourceDescriptor png_resource;
       memcpy(png_resource.ResourceID, asset_id.Value(), UUIDlen);
       png_resource.Type = ASDCP::TimedText::MT_PNG;
       m_TDesc.ResourceList.push_back(png_resource);
       m_ResourceTypes.insert(ResourceTypeMap_t::value_type(UUID(png_resource.ResourceID),
 							   ASDCP::TimedText::MT_PNG));
+
+      if ( m_TDesc.NamespaceName.empty() )
+	{
+	  m_TDesc.NamespaceName = IMSC1_imageProfile;
+	}
     }
 
+  // If images are present and profile is "text" make sure to say something.
+  if ( ! m_ResourceTypes.empty() && m_TDesc.NamespaceName == IMSC1_textProfile )
+    {
+      DefaultLogSink().Warn("Unexpected IMSC-1 text profile; document contains images.\n ");
+    }
+  
+  // If all else fails set the profile to "text".
+  if ( m_TDesc.NamespaceName.empty() )
+    {
+      DefaultLogSink().Warn("Using default IMSC-1 text profile.\n ");
+      m_TDesc.NamespaceName = IMSC1_textProfile;
+    }
+
+  // Find font resources for later packaging as GS partitions.
   AttributeVisitor font_visitor("fontFamily");
   apply_visitor(m_Root, font_visitor);
   char buf[64];
 
   for ( i = font_visitor.value_list.begin(); i != font_visitor.value_list.end(); ++i )
     {
-      UUID font_id = create_font_name_id(*i);
+      UUID font_id = CreateFontNameId(PathBasename(*i));
 
       if ( PathIsFile(font_id.EncodeHex(buf, 64))
 	   || PathIsFile(*i+".ttf")
@@ -466,11 +466,11 @@ AS_02::TimedText::ST2052_TextParser::~ST2052_TextParser()
 // Opens the stream for reading, parses enough data to provide a complete
 // set of stream metadata for the MXFWriter below.
 ASDCP::Result_t
-AS_02::TimedText::ST2052_TextParser::OpenRead(const std::string& filename) const
+AS_02::TimedText::ST2052_TextParser::OpenRead(const std::string& filename, const std::string& profile_name) const
 {
   const_cast<AS_02::TimedText::ST2052_TextParser*>(this)->m_Parser = new h__TextParser;
 
-  Result_t result = m_Parser->OpenRead(filename);
+  Result_t result = m_Parser->OpenRead(filename, profile_name);
 
   if ( ASDCP_FAILURE(result) )
     const_cast<AS_02::TimedText::ST2052_TextParser*>(this)->m_Parser = 0;
@@ -480,11 +480,12 @@ AS_02::TimedText::ST2052_TextParser::OpenRead(const std::string& filename) const
 
 // Parses an XML document to provide a complete set of stream metadata for the MXFWriter below.
 Result_t
-AS_02::TimedText::ST2052_TextParser::OpenRead(const std::string& xml_doc, const std::string& filename) const
+AS_02::TimedText::ST2052_TextParser::OpenRead(const std::string& xml_doc, const std::string& filename,
+					      const std::string& profile_name) const
 {
   const_cast<AS_02::TimedText::ST2052_TextParser*>(this)->m_Parser = new h__TextParser;
 
-  Result_t result = m_Parser->OpenRead(xml_doc, filename);
+  Result_t result = m_Parser->OpenRead(xml_doc, filename, profile_name);
 
   if ( ASDCP_FAILURE(result) )
     const_cast<AS_02::TimedText::ST2052_TextParser*>(this)->m_Parser = 0;

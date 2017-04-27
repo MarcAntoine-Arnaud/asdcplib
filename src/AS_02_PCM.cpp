@@ -28,7 +28,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*! \file    AS_02_PCM.cpp
-  \version $Id: AS_02_PCM.cpp,v 1.17 2016/03/09 20:05:25 jhurst Exp $       
+  \version $Id: AS_02_PCM.cpp,v 1.18 2016/05/16 21:56:53 jhurst Exp $       
   \brief   AS-02 library, PCM essence reader and writer implementation
 */
 
@@ -106,7 +106,7 @@ AS_02::PCM::MXFReader::h__Reader::OpenRead(const std::string& filename, const AS
 	{
 	  if ( ! UL(reader.Key()).MatchIgnoreStream(m_Dict->ul(MDD_WAVEssenceClip)) )
 	    {
-	      const MDDEntry *entry = m_Dict->FindUL(reader.Key());
+	      const MDDEntry *entry = m_Dict->FindULAnyVersion(reader.Key());
 
 	      if ( entry == 0 )
 		{

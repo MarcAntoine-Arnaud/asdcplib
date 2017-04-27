@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -63,7 +63,7 @@ namespace AS_02
       h__AS02Reader(const ASDCP::Dictionary&);
       virtual ~h__AS02Reader();
 
-      Result_t OpenMXFRead(const char* filename);
+      Result_t OpenMXFRead(const std::string& filename);
 
       // USE FRAME WRAPPING...
       Result_t ReadEKLVFrame(ui32_t FrameNum, ASDCP::FrameBuffer& FrameBuf,
@@ -172,7 +172,7 @@ namespace AS_02
 	    return RESULT_PARAM;
 	  }
 
-	InitHeader();
+	InitHeader(MXFVersion_2011);
 
 	AddSourceClip(EditRate, EditRate/*TODO: for a moment*/, TCFrameRate, TrackName, EssenceUL, DataDefinition, PackageLabel);
 	AddEssenceDescriptor(WrappingUL);
@@ -193,6 +193,8 @@ namespace AS_02
 	    UL body_ul(this->m_Dict->ul(MDD_ClosedCompleteBodyPartition));
 	    Partition body_part(this->m_Dict);
 	    body_part.BodySID = 1;
+	    body_part.MajorVersion = this->m_HeaderPart.MajorVersion;
+	    body_part.MinorVersion = this->m_HeaderPart.MinorVersion;
 	    body_part.OperationalPattern = this->m_HeaderPart.OperationalPattern;
 	    body_part.EssenceContainers = this->m_HeaderPart.EssenceContainers;
 	    body_part.ThisPartition = this->m_ECStart;
@@ -231,6 +233,8 @@ namespace AS_02
 	this->m_HeaderPart.FooterPartition = here;
 
 	assert(this->m_Dict);
+	footer_part.MajorVersion = this->m_HeaderPart.MajorVersion;
+	footer_part.MinorVersion = this->m_HeaderPart.MinorVersion;
 	footer_part.OperationalPattern = this->m_HeaderPart.OperationalPattern;
 	footer_part.EssenceContainers = this->m_HeaderPart.EssenceContainers;
 	footer_part.FooterPartition = here;
@@ -309,7 +313,6 @@ namespace AS_02
     public:
       ui64_t  m_ECStart; // offset of the first essence element
       ui64_t  m_ClipStart;  // state variable for clip-wrap-in-progress
-      //      AS_02::MXF::AS02IndexWriterCBR m_IndexWriter;
       IndexStrategy_t m_IndexStrategy; // per SMPTE ST 2067-5
 
       h__AS02WriterClip(const Dictionary&);

@@ -1,5 +1,5 @@
 
-$Id: README,v 1.99 2016/03/17 20:55:45 jhurst Exp $
+$Id: README,v 1.111 2016/12/11 04:42:35 jhurst Exp $
 
 The asdcplib library is a set of objects that offer
 simplified access to files conforming to the sound and
@@ -123,9 +123,9 @@ kmuuidgen, kmrandgen - generate UUID values and random numbers.
 wavesplit - Splits a WAVE file into two or more output files. Used
   to untangle incorrectly-paired DCDM sound files.
 
-blackwave - Write a WAVE file full of zeros,  Used to make filler
-  tracks (though you would be better off modifying asdcp-test if
-  this is a common use case).
+blackwave - Write a WAVE file of zeros.
+
+pinkwave - Write a WAVE file of SMPTE ST 2095 pink noise.
 
 j2c-test - Displays information about JP2K codestreams.
 
@@ -150,6 +150,93 @@ command-line utilities all respond to -h.
 
 
 Change History
+
+2016-12-10 - MDD bug fix 2.7.19
+ o The previous version (2.7.18) contained incorrect MDD.cpp and MDD.h
+   files which affect the PIMF and JP2KEssenceCompression labels.
+
+
+2016-12-10 - bug fixes 2.7.18
+ o Fixed *all* Partiton version numbers in AS-02 files (the previous attempt
+   only affected the header partition)
+ o Improved IMSC-1 profile detection. May not yet be perfect, experimentation
+   encouraged!
+ o Added IMF App2e UL values and new MXF data types ColorPrimary and
+   ThreeColorPrimaries (contributed by Schleich)
+ o Added picture descriptor elements MasteringDisplayPrimaries,
+   MasteringDisplayWhitePointChromaticity, MasteringDisplayMaximumLuminance,
+   and MasteringDisplayMinimumLuminance
+ o Added -o and -O options to as-02-wrap 
+ o Fixed as-02-wrap option -p when making 4:4:4 files
+ o Simplified as-02-wrap syntax description
+
+
+2016-12-01 - bug fixes 2.6.17
+ o Fixed Partiton and Preface version numbers in AS-02 files
+ o Replaced WIN32 directory scanner with dirent_win.h
+ o The NamespaceURI property of AS-02 timed text files has been exposed in the API
+   and via as-02-wrap -P. This behavior replaces previous bad behavior, but puts
+   responsibility for selecting the correct value on the operator.
+ o Exposed CreatePNGNameId and CreateFontNameId subroutines in AS_02::TimedText
+ o Adjusted UUID generation based on PNG and font names to exclude paths by
+   inserting a call to PathBasename at each Id generation site
+ o Fixed AS-02 timed text index partition
+ o Fixed contents of generic partiton EssenceContainers property in AS-DCP timed
+   text files
+ o Added PixelLayout to RGBAEssenceDescriptor (contributed by Schleich)
+ o Cleared up MXFGCP1FrameWrappedPictureElement / MXFGCP1FrameWrappedPictureElement
+   ambiguity. PHDR continues to use MXFGCP1FrameWrappedPictureElement.
+   MXFGCI1FrameWrappedPictureElement is supported for interlace.
+ o Added support for 192, 200 and 240 fps images, includes 96, 100 and 120 fpe stereo
+ o Added missing MCA properties to MCALabelSubDescriptor (contributed by Ruppel)
+ o New MXF data type: LineMapPair
+ o Added default 0,0 VideoLineMap value when wrapping CDCI with as-02-wrap
+ o Added VideoLineMap property to GenericPictureEssenceDescriptor
+ o Added timed text unwrap support to as-02-unwrap (contributed by Ruppel)
+ o Added prototype PIDM dynamic metadata wrapping, config with --enable-phdr
+   (Not for production use, caveat emptor, not the droids, etc.)
+
+
+2016-08-11 - bug fixes, 2.5.15
+
+ o Modified as-02-wrap to pass WhiteRefLev, BlackRefLev and ColorRange
+    (contributed by Elmer Musser / Rod Bogart)
+ o Fixed a bug in the index reader that allowed an out-of-bounds vector index
+   to be used.
+ o Modified the IndexEntry parser to ignore additional bytes belonging to slice
+   values.
+
+
+2016-05-06 - bug fixes, 2.5.14
+
+ o Release 2.5.12 caused two problems with Atoms and DTS-X wrapping that are
+   addressed by this release. The UL values that were changed to correct the
+   DCData (ST 429-14) implementation had two unintended side-effects:
+     1. v2.5.12 cannot read old DCData (and thus DTS-X) track files
+     2. v2.5.12 creates broken Atmos track files (incorrect ULs)
+   The fix for this involved the following changes:
+     1. ASDCP::DCData::(MXFReader|MXFWriter) are no longer base classes of
+        ASDCP::ATMOS::(MXFReader|MXFWriter).
+     2. New UL values have been added to carry the original Atoms UL values:
+        a. DolbyAtmosDCDataWrappingFrame
+        b. DolbyAtmosDCDataEssence
+        c. DolbyAtmosDCDataDescriptor
+     3. ASDCP::ATMOS::(MXFReader|MXFWriter) have been modified to use the
+        DolbyAtmosDCData* UL values.
+     4. ASDCP::DCData::MXFReader will parse files having either DCData* or
+        DolbyAtmosDCData* UL values.
+     5. ASDCP::DCData:: MXFWriter continues to use DCData* UL values from ST
+        429-14
+  o Some optional parameters of the MXF metadata packs were being erroneously
+    initialized with a value of zero (0), such as GenericPictureEssenceDescriptor
+    ::SignalStandard, GenericPictureEssenceDescriptor::SampledXOffset(0), etc.
+  o Added higher edit rates (96, 100, 120) to the cinema TimedText_Parser
+
+  o Defined bool ASDCP::UL::operator<(const UL& rhs) const, which is needed to
+    carry out the version-insensitive lookup policy when searching for ULs in a
+    std::map<> of UL entries.
+  o New files:  src/info.in src/CMakeLists.txt
+  o Removed filess:  AS_DCP_DCData_internal.h
 
 
 2016-03-17 - bug fixes, 2.5.12

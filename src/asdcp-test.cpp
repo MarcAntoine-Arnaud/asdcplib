@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-test.cpp
-    \version $Id: asdcp-test.cpp,v 1.53 2015/10/07 16:41:23 jhurst Exp $       
+    \version $Id: asdcp-test.cpp,v 1.54 2016/11/22 17:58:19 jhurst Exp $       
     \brief   AS-DCP file manipulation utility
 
   This program provides command line access to the major features of the asdcplib
@@ -306,6 +306,9 @@ public:
     if ( picture_rate == 96 ) return EditRate_96;
     if ( picture_rate == 100 ) return EditRate_100;
     if ( picture_rate == 120 ) return EditRate_120;
+    if ( picture_rate == 192 ) return EditRate_192;
+    if ( picture_rate == 200 ) return EditRate_200;
+    if ( picture_rate == 240 ) return EditRate_240;
     return EditRate_24;
   }
 
@@ -326,6 +329,9 @@ public:
     if ( picture_rate == 96 ) return "96";
     if ( picture_rate == 100 ) return "100";
     if ( picture_rate == 120 ) return "120";
+    if ( picture_rate == 192 ) return "192";
+    if ( picture_rate == 200 ) return "200";
+    if ( picture_rate == 240 ) return "240";
     return "24";
   }
 

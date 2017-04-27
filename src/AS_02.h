@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.20 2016/03/09 20:05:25 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.25 2016/12/02 18:45:14 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -349,6 +349,11 @@ namespace AS_02
 	  Result_t ResolveRID(const byte_t* uuid, ASDCP::TimedText::FrameBuffer& FrameBuf) const;
 	};
       
+
+      // Generate UUID asset ID values from file contents
+      Kumu::UUID CreatePNGNameId(const std::string& image_name);
+      Kumu::UUID CreateFontNameId(const std::string& font_name);
+
       //
       class ST2052_TextParser
 	{
@@ -362,10 +367,11 @@ namespace AS_02
 
 	  // Opens an XML file for reading, parses data to provide a complete
 	  // set of stream metadata for the MXFWriter below.
-	  Result_t OpenRead(const std::string& filename) const;
+	  Result_t OpenRead(const std::string& filename, const std::string& profile_name) const;
 
 	  // Parse an XML string 
-	  Result_t OpenRead(const std::string& xml_doc, const std::string& filename) const;
+	  Result_t OpenRead(const std::string& xml_doc, const std::string& filename,
+			    const std::string& profile_name) const;
 
 	  // Fill a TimedTextDescriptor struct with the values from the file's contents.
 	  // Returns RESULT_INIT if the file is not open.
@@ -487,6 +493,7 @@ namespace AS_02
 	  void     DumpIndex(FILE* = 0) const;
 	};
     } // namespace TimedText
+
 
 
 } // namespace AS_02

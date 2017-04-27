@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MXF.cpp
-    \version $Id: MXF.cpp,v 1.79 2015/10/12 15:30:46 jhurst Exp $
+    \version $Id: MXF.cpp,v 1.81 2016/06/28 22:00:06 jhurst Exp $
     \brief   MXF objects
 */
 
@@ -575,7 +575,7 @@ ASDCP::MXF::Primer::Dump(FILE* stream)
   Batch<LocalTagEntry>::iterator i = LocalTagEntryBatch.begin();
   for ( ; i != LocalTagEntryBatch.end(); i++ )
     {
-      const MDDEntry* Entry = m_Dict->FindUL((*i).UL.Value());
+      const MDDEntry* Entry = m_Dict->FindULAnyVersion((*i).UL.Value());
       fprintf(stream, "  %s %s\n", (*i).EncodeString(identbuf, IdentBufferLen), (Entry ? Entry->name : "Unknown"));
     }
 }
@@ -702,11 +702,11 @@ ASDCP::MXF::OP1aHeader::InitFromFile(const Kumu::FileReader& Reader)
   if ( m_Dict == &DefaultCompositeDict() )
     {
       // select more explicit dictionary if one is available
-      if ( OperationalPattern.ExactMatch(MXFInterop_OPAtom_Entry().ul) )
+      if ( OperationalPattern.MatchExact(MXFInterop_OPAtom_Entry().ul) )
 	{
 	  m_Dict = &DefaultInteropDict();
 	}
-      else if ( OperationalPattern.ExactMatch(SMPTE_390_OPAtom_Entry().ul) )
+      else if ( OperationalPattern.MatchExact(SMPTE_390_OPAtom_Entry().ul) )
 	{
 	  m_Dict = &DefaultSMPTEDict();
 	}
@@ -1216,8 +1216,16 @@ ASDCP::MXF::OPAtomIndexFooter::Lookup(ui32_t frame_num, IndexTableSegment::Index
 	    {
 	      ui64_t tmp = frame_num - start_pos;
 	      assert(tmp <= 0xFFFFFFFFL);
-	      Entry = segment->IndexEntryArray[(ui32_t) tmp];
-	      return RESULT_OK;
+
+	      if ( tmp < segment->IndexEntryArray.size() )
+		{
+		  Entry = segment->IndexEntryArray[(ui32_t) tmp];
+		  return RESULT_OK;
+		}
+	      else
+		{
+		  DefaultLogSink().Error("Malformed index table segment, IndexDuration does not match entries.\n");
+		}
 	    }
 	}
     }

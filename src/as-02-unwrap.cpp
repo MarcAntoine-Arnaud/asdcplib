@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-unwrap.cpp
-    \version $Id: as-02-unwrap.cpp,v 1.14 2016/03/09 20:05:26 jhurst Exp $       
+    \version $Id: as-02-unwrap.cpp,v 1.18 2016/12/02 17:23:14 jhurst Exp $       
     \brief   AS-02 file manipulation utility
 
   This program extracts picture and sound from AS-02 files.
@@ -144,6 +144,7 @@ public:
   byte_t key_id_value[UUIDlen];// value of given key ID (when key_id_flag is true)
   PCM::ChannelFormat_t channel_fmt; // audio channel arrangement
   const char* input_filename;
+  const char* extension;
   std::string prefix_buffer;
 
   //
@@ -189,6 +190,11 @@ public:
 		TEST_EXTRA_ARG(i, 'd');
 		duration_flag = true;
 		duration = Kumu::xabs(strtol(argv[i], 0, 10));
+		break;
+
+	      case 'e':
+		TEST_EXTRA_ARG(i, 'e');
+		extension = argv[i];
 		break;
 
 	      case 'f':
@@ -579,6 +585,87 @@ read_PCM_file(CommandOptions& Options)
 }
 
 
+//------------------------------------------------------------------------------------------
+// TimedText essence
+
+// Read one or more timed text streams from a plaintext AS-02 file
+//
+Result_t
+read_timed_text_file(CommandOptions& Options)
+{
+  AESDecContext*     Context = 0;
+  HMACContext*       HMAC = 0;
+  AS_02::TimedText::MXFReader     Reader;
+  TimedText::FrameBuffer   FrameBuffer(Options.fb_size);
+  //ASDCP::TimedText::FrameBuffer   FrameBuffer(Options.fb_size);
+  AS_02::TimedText::TimedTextDescriptor TDesc;
+  ASDCP::MXF::TimedTextDescriptor *tt_descriptor = 0;
+
+  Result_t result = Reader.OpenRead(Options.input_filename);
+
+  if ( ASDCP_SUCCESS(result) )
+    {
+      result = Reader.OP1aHeader().GetMDObjectByType(DefaultCompositeDict().ul(MDD_TimedTextDescriptor),
+						     reinterpret_cast<MXF::InterchangeObject**>(&tt_descriptor));
+    if ( Options.verbose_flag ) {
+    	tt_descriptor->Dump();
+    }
+
+
+  if ( ASDCP_FAILURE(result) )
+    return result;
+
+  std::string XMLDoc;
+  std::string out_path = Kumu::PathDirname(Options.file_prefix);
+  ui32_t write_count;
+  char buf[64];
+  TimedText::ResourceList_t::const_iterator ri;
+
+  result = Reader.ReadTimedTextResource(XMLDoc);
+
+  if ( ASDCP_SUCCESS(result) )
+    {
+      Reader.FillTimedTextDescriptor(TDesc);
+      FrameBuffer.Capacity(Options.fb_size);
+
+      if ( Options.verbose_flag )
+	TimedText::DescriptorDump(TDesc);
+    }
+
+  if ( ASDCP_SUCCESS(result) && ( ! Options.no_write_flag ) )
+    {
+      Kumu::FileWriter Writer;
+      result = Writer.OpenWrite(Options.file_prefix);
+
+      if ( ASDCP_SUCCESS(result) )
+	result = Writer.Write(reinterpret_cast<const byte_t*>(XMLDoc.c_str()), XMLDoc.size(), &write_count);
+    }
+
+  for ( ri = TDesc.ResourceList.begin() ; ri != TDesc.ResourceList.end() && ASDCP_SUCCESS(result); ri++ )
+    {
+      result = Reader.ReadAncillaryResource(ri->ResourceID, FrameBuffer, Context, HMAC);
+
+      if ( ASDCP_SUCCESS(result) && ( ! Options.no_write_flag ) )
+	{
+	  Kumu::FileWriter Writer;
+	  if (out_path != "") {
+		  result = Writer.OpenWrite(Kumu::PathJoin(out_path, Kumu::UUID(ri->ResourceID).EncodeHex(buf, 64)).c_str());
+	  } else {
+		  // Workaround for a bug in Kumu::PathJoin
+		  result = Writer.OpenWrite(Kumu::UUID(ri->ResourceID).EncodeHex(buf, 64));
+	  }
+
+	  if ( ASDCP_SUCCESS(result) )
+	    result = Writer.Write(FrameBuffer.RoData(), FrameBuffer.Size(), &write_count);
+
+	      if ( Options.verbose_flag )
+		FrameBuffer.Dump(stderr, Options.fb_dump_size);
+	}
+    }
+    }
+  return result;
+}
+
 //
 int
 main(int argc, const char** argv)
@@ -617,8 +704,12 @@ main(int argc, const char** argv)
 	  result = read_PCM_file(Options);
 	  break;
 
+	case ESS_AS02_TIMED_TEXT:
+	  result = read_timed_text_file(Options);
+	  break;
+
 	default:
-	  fprintf(stderr, "%s: Unknown file type, not AS-02 essence.\n", Options.input_filename);
+	  fprintf(stderr, "%s: Unknown file type (%d), not AS-02 essence.\n", Options.input_filename, EssenceType);
 	  return 5;
 	}
     }

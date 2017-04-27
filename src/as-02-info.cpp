@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-info.cpp
-    \version $Id: as-02-info.cpp,v 1.2 2016/03/17 20:54:25 jhurst Exp $
+    \version $Id: as-02-info.cpp,v 1.3 2016/05/06 18:40:34 jhurst Exp $
     \brief   AS-02 file metadata utility
 
   This program provides metadata information about an AS-02 file.
@@ -371,6 +371,7 @@ class MyAudioDescriptor : public PCM::AudioDescriptor
     if ( m_WaveAudioDescriptor != 0 )
       {
 	AudioSamplingRate = m_WaveAudioDescriptor->SampleRate;
+	ContainerDuration = m_WaveAudioDescriptor->ContainerDuration;
       }
     else
       {

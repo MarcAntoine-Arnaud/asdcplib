@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2014, John Hurst
+Copyright (c) 2003-2016, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-unwrap.cpp
-    \version $Id: asdcp-unwrap.cpp,v 1.7 2015/10/07 16:41:23 jhurst Exp $
+    \version $Id: asdcp-unwrap.cpp,v 1.9 2016/11/22 17:58:19 jhurst Exp $
     \brief   AS-DCP file manipulation utility
 
   This program extracts picture, sound and text essence from AS-DCP files.
@@ -98,7 +98,7 @@ Options:\n\
   -h | -help        - Show help\n\
   -k <key-string>   - Use key for ciphertext operations\n\
   -m                - verify HMAC values when reading\n\
-  -p <rate>         - fps of picture when wrapping PCM or JP2K:\n\
+  -p <rate>         - Alternative picture rate when unwrapping PCM:\n\
                       Use one of [23|24|25|30|48|50|60], 24 is default\n\
   -s <size>         - Number of bytes to dump to output when -v is given\n\
   -V                - Show version information\n\
@@ -173,6 +173,9 @@ public:
     if ( picture_rate == 96 ) return EditRate_96;
     if ( picture_rate == 100 ) return EditRate_100;
     if ( picture_rate == 120 ) return EditRate_120;
+    if ( picture_rate == 192 ) return EditRate_192;
+    if ( picture_rate == 200 ) return EditRate_200;
+    if ( picture_rate == 240 ) return EditRate_240;
     return EditRate_24;
   }
 
@@ -218,10 +221,10 @@ public:
 		duration = Kumu::xabs(strtol(argv[i], 0, 10));
 		break;
 
-          case 'e':
-            TEST_EXTRA_ARG(i, 'e');
-            extension = argv[i];
-            break;
+	      case 'e':
+		TEST_EXTRA_ARG(i, 'e');
+		extension = argv[i];
+		break;
 
 	      case 'f':
 		TEST_EXTRA_ARG(i, 'f');

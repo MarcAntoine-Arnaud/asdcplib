@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2003-2015, John Hurst
+Copyright (c) 2003-2016, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    asdcp-wrap.cpp
-    \version $Id: asdcp-wrap.cpp,v 1.23 2015/10/14 16:48:22 jhurst Exp $
+    \version $Id: asdcp-wrap.cpp,v 1.25 2016/11/22 17:58:19 jhurst Exp $
     \brief   AS-DCP file manipulation utility
 
   This program wraps d-cinema essence (picture, sound or text) into an AS-DCP
@@ -266,6 +266,9 @@ public:
     if ( picture_rate == 96 ) return EditRate_96;
     if ( picture_rate == 100 ) return EditRate_100;
     if ( picture_rate == 120 ) return EditRate_120;
+    if ( picture_rate == 192 ) return EditRate_192;
+    if ( picture_rate == 200 ) return EditRate_200;
+    if ( picture_rate == 240 ) return EditRate_240;
     return EditRate_24;
   }
 
@@ -286,6 +289,9 @@ public:
     if ( picture_rate == 96 ) return "96";
     if ( picture_rate == 100 ) return "100";
     if ( picture_rate == 120 ) return "120";
+    if ( picture_rate == 192 ) return "192";
+    if ( picture_rate == 200 ) return "200";
+    if ( picture_rate == 240 ) return "240";
     return "24";
   }
 
@@ -617,7 +623,8 @@ bool
 check_phfr_params(CommandOptions& Options, JP2K::PictureDescriptor& PDesc)
 {
   Rational rate = Options.PictureRate();
-  if ( rate != EditRate_96 && rate != EditRate_100 && rate != EditRate_120 )
+  if ( rate != EditRate_96 && rate != EditRate_100 && rate != EditRate_120
+       && rate != EditRate_192 && rate != EditRate_200 && rate != EditRate_240 )
     return true;
 
   if ( PDesc.StoredWidth > 2048 )
@@ -1151,6 +1158,11 @@ write_PCM_with_ATMOS_sync_file(CommandOptions& Options)
   // set up MXF writer
   if ( ASDCP_SUCCESS(result) )
   {
+    if ( Mixer.ChannelCount() % 2 != 0 )
+      {
+        result = Mixer.AppendSilenceChannels(1);
+      }
+
     Mixer.FillAudioDescriptor(ADesc);
 
     ADesc.EditRate = PictureRate;

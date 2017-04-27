@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2015, John Hurst
+Copyright (c) 2011-2016, John Hurst
 
 All rights reserved.
 
@@ -26,7 +26,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02_PHDR.cpp
-  \version $Id: AS_02_PHDR.cpp,v 1.7 2015/10/09 23:41:11 jhurst Exp $
+  \version $Id: AS_02_PHDR.cpp,v 1.10 2016/12/03 21:26:24 jhurst Exp $
   \brief   AS-02 library, JPEG 2000 P-HDR essence reader and writer implementation
 */
 
@@ -445,7 +445,7 @@ AS_02::PHDR::MXFWriter::h__Writer::WritePHDRHeader(const std::string& PackageLab
       return RESULT_PARAM;
     }
   
-  InitHeader();
+  InitHeader(MXFVersion_2011);
   
   AddSourceClip(EditRate, EditRate/*TODO: for a moment*/, TCFrameRate, TrackName, EssenceUL, DataDefinition, PackageLabel);
 
@@ -500,6 +500,8 @@ AS_02::PHDR::MXFWriter::h__Writer::WritePHDRHeader(const std::string& PackageLab
       UL body_ul(m_Dict->ul(MDD_ClosedCompleteBodyPartition));
       Partition body_part(m_Dict);
       body_part.BodySID = 1;
+      body_part.MajorVersion = m_HeaderPart.MajorVersion;
+      body_part.MinorVersion = m_HeaderPart.MinorVersion;
       body_part.OperationalPattern = m_HeaderPart.OperationalPattern;
       body_part.EssenceContainers = m_HeaderPart.EssenceContainers;
       body_part.ThisPartition = m_ECStart;
@@ -530,7 +532,7 @@ AS_02::PHDR::MXFWriter::h__Writer::SetSourceStream(const std::string& label, con
 
   if ( KM_SUCCESS(result) )
     {
-      result = WritePHDRHeader(label, UL(m_Dict->ul(MDD_JPEG_2000WrappingFrame)),
+      result = WritePHDRHeader(label, UL(m_Dict->ul(MDD_MXFGCFUFrameWrappedPictureElement)),
 			       PICT_DEF_LABEL, UL(m_EssenceUL), UL(m_Dict->ul(MDD_PictureDataDef)),
 			       edit_rate, derive_timecode_rate_from_edit_rate(edit_rate));
 
@@ -599,6 +601,8 @@ AS_02::PHDR::MXFWriter::h__Writer::WriteFrame(const AS_02::PHDR::FrameBuffer& Fr
 	  UL body_ul(m_Dict->ul(MDD_ClosedCompleteBodyPartition));
 	  Partition body_part(m_Dict);
 	  body_part.BodySID = 1;
+	  body_part.MajorVersion = m_HeaderPart.MajorVersion;
+	  body_part.MinorVersion = m_HeaderPart.MinorVersion;
 	  body_part.OperationalPattern = m_HeaderPart.OperationalPattern;
 	  body_part.EssenceContainers = m_HeaderPart.EssenceContainers;
 	  body_part.ThisPartition = m_File.Tell();
@@ -645,6 +649,8 @@ AS_02::PHDR::MXFWriter::h__Writer::Finalize(const std::string& PHDR_master_metad
 	  static UL GenericStream_DataElement(m_Dict->ul(MDD_GenericStream_DataElement));
 	  ASDCP::MXF::Partition GSPart(m_Dict);
 
+	  GSPart.MajorVersion = m_HeaderPart.MajorVersion;
+	  GSPart.MinorVersion = m_HeaderPart.MinorVersion;
 	  GSPart.ThisPartition = here;
 	  GSPart.PreviousPartition = m_RIP.PairArray.back().ByteOffset;
 	  GSPart.OperationalPattern = m_HeaderPart.OperationalPattern;

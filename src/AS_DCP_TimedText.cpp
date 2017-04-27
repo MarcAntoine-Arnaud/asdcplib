@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP_TimedText.cpp
-    \version $Id: AS_DCP_TimedText.cpp,v 1.39 2016/03/09 20:05:26 jhurst Exp $       
+    \version $Id: AS_DCP_TimedText.cpp,v 1.41 2016/12/02 23:28:26 jhurst Exp $       
     \brief   AS-DCP library, PCM essence reader and writer implementation
 */
 
@@ -580,7 +580,7 @@ ASDCP::TimedText::MXFWriter::h__Writer::SetSourceStream(ASDCP::TimedText::TimedT
 
   if ( ASDCP_SUCCESS(result) )
     {
-      InitHeader();
+      InitHeader(MXFVersion_2004);
 
       // First RIP Entry
       if ( m_Info.LabelSetType == LS_MXF_SMPTE )  // ERK
@@ -634,9 +634,7 @@ ASDCP::TimedText::MXFWriter::h__Writer::WriteTimedTextResource(const std::string
 
       IndexTableSegment::IndexEntry Entry;
       Entry.StreamOffset = m_StreamOffset;
-      
-      if ( ASDCP_SUCCESS(result) )
-	result = WriteEKLVPacket(FrameBuf, m_EssenceUL, Ctx, HMAC);
+      result = WriteEKLVPacket(FrameBuf, m_EssenceUL, Ctx, HMAC);
 
       if ( ASDCP_SUCCESS(result) )
 	{
@@ -670,7 +668,7 @@ ASDCP::TimedText::MXFWriter::h__Writer::WriteAncillaryResource(const ASDCP::Time
   GSPart.OperationalPattern = m_HeaderPart.OperationalPattern;
 
   m_RIP.PairArray.push_back(RIP::PartitionPair(m_EssenceStreamID++, here));
-  GSPart.EssenceContainers.push_back(UL(m_Dict->ul(MDD_TimedTextEssence)));
+  GSPart.EssenceContainers = m_HeaderPart.EssenceContainers;
   UL TmpUL(m_Dict->ul(MDD_GenericStreamPartition));
   Result_t result = GSPart.WriteToFile(m_File, TmpUL);
 

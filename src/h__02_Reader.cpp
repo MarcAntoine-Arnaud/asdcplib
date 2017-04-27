@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2015, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Reader.cpp
-  \version $Id: h__02_Reader.cpp,v 1.16 2016/03/09 20:05:26 jhurst Exp $
+  \version $Id: h__02_Reader.cpp,v 1.19 2016/11/22 17:58:19 jhurst Exp $
   \brief   MXF file reader base class
 */
 
@@ -353,7 +353,7 @@ AS_02::MXF::AS02IndexReader::Lookup(ui32_t frame_num, ASDCP::MXF::IndexTableSegm
 	{
 	  ui64_t start_pos = segment->IndexStartPosition;
 
-	  if ( segment->EditUnitByteCount > 0 )
+	  if ( segment->EditUnitByteCount > 0 ) // CBR
 	    {
 	      if ( m_PacketList->m_List.size() > 1 )
 		DefaultLogSink().Error("Unexpected multiple IndexTableSegment in CBR file\n");
@@ -365,13 +365,21 @@ AS_02::MXF::AS02IndexReader::Lookup(ui32_t frame_num, ASDCP::MXF::IndexTableSegm
 	      return RESULT_OK;
 	    }
 	  else if ( (ui64_t)frame_num >= start_pos
-		    && (ui64_t)frame_num < (start_pos + segment->IndexDuration) )
+		    && (ui64_t)frame_num < (start_pos + segment->IndexDuration) ) // VBR in segments
 	    {
 	      ui64_t tmp = frame_num - start_pos;
 	      assert(tmp <= 0xFFFFFFFFL);
-	      Entry = segment->IndexEntryArray[(ui32_t) tmp];
-	      Entry.StreamOffset = Entry.StreamOffset - segment->RtEntryOffset + segment->RtFileOffset;
-	      return RESULT_OK;
+
+	      if ( tmp < segment->IndexEntryArray.size() )
+		{
+		  Entry = segment->IndexEntryArray[(ui32_t) tmp];
+		  Entry.StreamOffset = Entry.StreamOffset - segment->RtEntryOffset + segment->RtFileOffset;
+		  return RESULT_OK;
+		}
+	      else
+		{
+		  DefaultLogSink().Error("Malformed index table segment, IndexDuration does not match entries.\n");
+		}
 	    }
 	}
     }
@@ -391,7 +399,7 @@ AS_02::h__AS02Reader::~h__AS02Reader() {}
 
 // AS-DCP method of opening an MXF file for read
 Result_t
-AS_02::h__AS02Reader::OpenMXFRead(const char* filename)
+AS_02::h__AS02Reader::OpenMXFRead(const std::string& filename)
 {
   bool has_header_essence = false;
   Result_t result = ASDCP::MXF::TrackFileReader<OP1aHeader, AS_02::MXF::AS02IndexReader>::OpenMXFRead(filename);
@@ -409,7 +417,7 @@ AS_02::h__AS02Reader::OpenMXFRead(const char* filename)
       if ( m_HeaderPart.OperationalPattern != OP1a_ul )
 	{
 	  char strbuf[IdentBufferLen];
-	  const MDDEntry* Entry = m_Dict->FindUL(m_HeaderPart.OperationalPattern.Value());
+	  const MDDEntry* Entry = m_Dict->FindULAnyVersion(m_HeaderPart.OperationalPattern.Value());
 
 	  if ( Entry == 0 )
 	    {

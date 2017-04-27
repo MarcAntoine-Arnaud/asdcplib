@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2013, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Writer.cpp
-  \version $Id: h__02_Writer.cpp,v 1.14 2015/10/09 23:41:11 jhurst Exp $
+  \version $Id: h__02_Writer.cpp,v 1.15 2016/12/03 21:26:24 jhurst Exp $
   \brief   MXF file writer base class
 */
 
@@ -199,6 +199,8 @@ AS_02::h__AS02WriterFrame::WriteEKLVPacket(const ASDCP::FrameBuffer& FrameBuf,co
 
       UL body_ul(m_Dict->ul(MDD_ClosedCompleteBodyPartition));
       Partition body_part(m_Dict);
+      body_part.MajorVersion = m_HeaderPart.MajorVersion;
+      body_part.MinorVersion = m_HeaderPart.MinorVersion;
       body_part.BodySID = 1;
       body_part.OperationalPattern = m_HeaderPart.OperationalPattern;
       body_part.EssenceContainers = m_HeaderPart.EssenceContainers;

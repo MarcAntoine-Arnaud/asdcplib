@@ -1,6 +1,6 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 #
-# $Id: Makefile.am,v 1.85 2016/03/17 23:58:13 mschroffel Exp $
+# $Id: Makefile.am,v 1.91 2016/12/01 20:12:37 jhurst Exp $
 #
 # Copyright (c) 2007-2016 John Hurst. All rights reserved.
 #
@@ -119,7 +119,7 @@ libasdcp_la_SOURCES = MPEG2_Parser.cpp MPEG.cpp JP2K_Codestream_Parser.cpp \
 	Wav.h WavFileWriter.h MXF.h Metadata.h \
 	JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h \
 	PCMParserList.h S12MTimecode.h MDD.cpp \
-	AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp AS_DCP_DCData_internal.h \
+	AS_DCP_ATMOS.cpp  AS_DCP_DCData.cpp info.in \
 	DCData_ByteStream_Parser.cpp DCData_Sequence_Parser.cpp \
 	AtmosSyncChannel_Generator.cpp AtmosSyncChannel_Generator.h \
 	AtmosSyncChannel_Mixer.cpp AtmosSyncChannel_Mixer.h \
@@ -157,7 +157,8 @@ if USE_PHDR
 libphdr_la_SOURCES	= \
 	AS_02_PHDR.h \
 	PHDR_Sequence_Parser.cpp \
-	AS_02_PHDR.cpp
+	AS_02_PHDR.cpp \
+	AS_02_PIDM.cpp
 
 libphdr_la_LDFLAGS = -release @VERSION@
 libphdr_la_LIBADD = libasdcp.la libkumu.la
@@ -337,7 +338,7 @@ TESTS_ENVIRONMENT = BUILD_DIR="." TEST_FILES=../tests TEST_FILE_PREFIX=DCPd1-M1 
 	JP2K_PREFIX=MM_2k_XYZ_
 
 # files to include in the distribution that automake doesn't automatically include
-EXTRA_DIST = fips-186-test-harness.pl $(TESTS) ../CMakeLists.txt
+EXTRA_DIST = fips-186-test-harness.pl $(TESTS) ../README.cmake ../CMakeLists.txt  CMakeLists.txt dirent_win.h
 if !FREEDIST
 if DEV_HEADERS
 EXTRA_DIST += $(nodist_libasdcp_la_SOURCES) $(nodist_tt_xform_SOURCES)

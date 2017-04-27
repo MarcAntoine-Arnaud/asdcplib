@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    AS_DCP.h
-    \version $Id: AS_DCP.h,v 1.53 2016/03/09 20:05:26 jhurst Exp $
+    \version $Id: AS_DCP.h,v 1.54 2016/11/22 17:58:18 jhurst Exp $
     \brief   AS-DCP library, public interface
 
 The asdcplib library is a set of file access objects that offer simplified
@@ -302,6 +302,9 @@ namespace ASDCP {
   const Rational EditRate_96 = Rational(96,1);
   const Rational EditRate_100 = Rational(100,1);
   const Rational EditRate_120 = Rational(120,1);
+  const Rational EditRate_192 = Rational(192,1);
+  const Rational EditRate_200 = Rational(200,1);
+  const Rational EditRate_240 = Rational(240,1);
 
   // Archival frame rates, see ST 428-21
   // These rates are new and not supported by all systems. Do not assume that
