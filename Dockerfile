@@ -22,5 +22,4 @@ RUN runtime_deps='libstdc++ openssl' \
     && apk del .build-dependencies \
     && apk add --no-cache $runtime_deps \
     && cd / \
-    && rm -Rf /src \
-    && rm -Rf /usr/local/include
+    && rm -Rf /src
