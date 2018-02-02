@@ -14,7 +14,7 @@ RUN runtime_deps='libstdc++ openssl' \
     && make install \
     && cd /src \
     && rm -Rf /xerces \
-    && ./configure --enable-phdr --enable-as-02 --with-xerces=/usr/local .. \
+    && ./configure --build=x86_64 --enable-phdr --enable-as-02 --with-xerces=/usr/local .. \
     && make \
     && make install \
     && apk del .build-dependencies \
