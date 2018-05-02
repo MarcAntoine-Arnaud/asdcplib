@@ -15528,7 +15528,7 @@ $as_echo_n "checking if OpenSSL version is >= $openssl_version_req... " >&6; }
                                                \+ $((1 + $(printf "%d" \'$openssl_version_req_patch) - $(printf "%d" \'a))) \* $((0x10)) \
                                                \+ $((0xf))`
 
-                                        openssl_version_number=`expr $(($(grep OPENSSL_VERSION_NUMBER $openssl_include_dir/openssl/opensslv.h | cut -f 2 | tr -d L)))`
+                                        openssl_version_number=`expr $(($(grep OPENSSL_VERSION_NUMBER $openssl_include_dir/openssl/opensslv.h | rev | cut -d " " -f 1 | tr -d L | rev)))`
 
                     openssl_version_check=`expr $openssl_version_number \>\= $openssl_version_req_number`
                     if test "$openssl_version_check" = "1"; then
