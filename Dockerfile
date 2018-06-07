@@ -2,13 +2,13 @@ FROM alpine:3.6
 
 ADD . /src
 
-ADD http://mirror.ibcp.fr/pub/apache//xerces/c/3/sources/xerces-c-3.2.0.tar.gz /xerces/xerces-c-3.2.0.tar.gz
+ADD http://mirror.ibcp.fr/pub/apache//xerces/c/3/sources/xerces-c-3.2.1.tar.gz /xerces/xerces-c-3.2.1.tar.gz
 
 RUN runtime_deps='libstdc++ openssl' \
     && apk add --virtual .build-dependencies --no-cache openssl-dev cmake build-base expat \
     && cd /xerces \
-    && tar -xf xerces-c-3.2.0.tar.gz \
-    && cd xerces-c-3.2.0 \
+    && tar -xf xerces-c-3.2.1.tar.gz \
+    && cd xerces-c-3.2.1 \
     && ./configure --disable-static \
     && make \
     && make install \
