@@ -1,7 +1,7 @@
 find_library(OpenSSLLib_PATH NAMES libeay32 crypto PATHS "${PROJECT_SOURCE_DIR}/../openssl" "${PROJECT_SOURCE_DIR}/../lib/openssl" "$ENV{CMAKE_HINT}/openssl" ENV CMAKE_HINT PATH_SUFFIXES "lib" "openssl" "lib/openssl")
 find_path(OpenSSLLib_include_DIR NAMES openssl/rand.h PATHS "${PROJECT_SOURCE_DIR}/../openssl" "${PROJECT_SOURCE_DIR}/../lib/openssl" "$ENV{CMAKE_HINT}/openssl" ENV CMAKE_HINT PATH_SUFFIXES "include" "inc32")
 find_library(XercescppLib_PATH NAMES xerces-c xerces-c_3 PATHS "${PROJECT_SOURCE_DIR}/../xercescpp" "${PROJECT_SOURCE_DIR}/../lib/xercescpp" "$ENV{CMAKE_HINT}/xercescpp" ENV CMAKE_HINT PATH_SUFFIXES "lib")
-find_library(XercescppLib_Debug_PATH NAMES xerces-c xerces-c_3D PATHS "${PROJECT_SOURCE_DIR}/../xercescpp" "${PROJECT_SOURCE_DIR}/../lib/xercescpp" "$ENV{CMAKE_HINT}/xercescpp" ENV CMAKE_HINT PATH_SUFFIXES "lib")
+find_library(XercescppLib_Debug_PATH NAMES xerces-cD xerces-c_3D xerces-c PATHS "${PROJECT_SOURCE_DIR}/../xercescpp" "${PROJECT_SOURCE_DIR}/../lib/xercescpp" "$ENV{CMAKE_HINT}/xercescpp" ENV CMAKE_HINT PATH_SUFFIXES "lib")
 find_path(XercescppLib_include_DIR NAMES xercesc/dom/DOM.hpp PATHS "${PROJECT_SOURCE_DIR}/../xercescpp" "${PROJECT_SOURCE_DIR}/../lib/xercescpp" "$ENV{CMAKE_HINT}/xercescpp" ENV CMAKE_HINT PATH_SUFFIXES "include")
 set(UseRandomUUID OFF CACHE BOOL "")
 
@@ -27,12 +27,12 @@ set(asdcp_src MPEG2_Parser.cpp MPEG.cpp JP2K_Codestream_Parser.cpp JP2K_Sequence
 )
 
 # header for deployment (install target)
-set(asdcp_deploy_header AS_DCP.h PCMParserList.h AS_DCP_internal.h KM_error.h KM_fileio.h KM_util.h KM_memio.h KM_tai.h KM_platform.h KM_log.h KM_mutex.h)
+set(asdcp_deploy_header AS_DCP.h PCMParserList.h AS_DCP_internal.h KM_error.h KM_fileio.h KM_util.h KM_memio.h KM_tai.h KM_platform.h KM_log.h KM_mutex.h dirent_win.h)
 
 # header
 set(asdcp_src ${asdcp_src} Wav.h WavFileWriter.h MXF.h Metadata.h JP2K.h AS_DCP.h AS_DCP_internal.h KLV.h MPEG.h MXFTypes.h MDD.h
 	PCMParserList.h S12MTimecode.h AtmosSyncChannel_Generator.h AtmosSyncChannel_Mixer.h PCMDataProviders.h
-	SyncEncoder.h SyncCommon.h CRC16.h UUIDInformation.h
+	SyncEncoder.h SyncCommon.h CRC16.h UUIDInformation.h dirent_win.h
 )
 
 # ----------as02----------

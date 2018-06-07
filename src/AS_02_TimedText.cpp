@@ -178,7 +178,31 @@ AS_02::TimedText::MXFReader::h__Reader::ReadTimedTextResource(ASDCP::TimedText::
    {
      FrameBuf.AssetID(m_TDesc.AssetID);
      FrameBuf.MIMEType("text/xml");
-   }
+   } else {
+		  DefaultLogSink().Debug("Index table broken - trying to seek to MDD_TimedTextEssence\n");
+		  KLReader reader;
+		  m_File.Seek(0);
+		  Kumu::fpos_t FilePosition = m_File.Tell();
+		  result = reader.ReadKLFromFile(m_File);
+
+		  if ( ! m_File.IsOpen() )
+			  return RESULT_INIT;
+
+		  while (!UL(reader.Key()).MatchIgnoreStream(m_Dict->ul(MDD_TimedTextEssence))) {
+			  FilePosition += reader.KLLength() + reader.Length();
+			  if ( FilePosition >= m_File.Size()) {
+				  return RESULT_ENDOFFILE;
+			  }
+
+			  result = m_File.Seek(FilePosition);
+			  result = reader.ReadKLFromFile(m_File);
+		  }
+
+		  DefaultLogSink().Debug("Found Timed Text Essence\n");
+		  result = m_File.Read(FrameBuf.Data(), reader.Length());
+		  FrameBuf.Size(reader.Length());
+
+	   }
 
  return result;
 }

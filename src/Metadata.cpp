@@ -1402,7 +1402,7 @@ GenericSoundEssenceDescriptor::WriteToTLVSet(TLVWriter& TLVSet)
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.WriteUi32(OBJ_WRITE_ARGS(GenericSoundEssenceDescriptor, ChannelCount));
   if ( ASDCP_SUCCESS(result) ) result = TLVSet.WriteUi32(OBJ_WRITE_ARGS(GenericSoundEssenceDescriptor, QuantizationBits));
   if ( ASDCP_SUCCESS(result)  && ! DialNorm.empty() ) result = TLVSet.WriteUi8(OBJ_WRITE_ARGS_OPT(GenericSoundEssenceDescriptor, DialNorm));
-  if ( ASDCP_SUCCESS(result) ) result = TLVSet.WriteObject(OBJ_WRITE_ARGS(GenericSoundEssenceDescriptor, SoundEssenceCoding));
+  if ( ASDCP_SUCCESS(result) && SoundEssenceCoding.HasValue()) result = TLVSet.WriteObject(OBJ_WRITE_ARGS(GenericSoundEssenceDescriptor, SoundEssenceCoding));
   return result;
 }
 
@@ -2809,7 +2809,7 @@ GenericDataEssenceDescriptor::WriteToTLVSet(TLVWriter& TLVSet)
 {
   assert(m_Dict);
   Result_t result = FileDescriptor::WriteToTLVSet(TLVSet);
-  if ( ASDCP_SUCCESS(result) ) result = TLVSet.WriteObject(OBJ_WRITE_ARGS(GenericDataEssenceDescriptor, DataEssenceCoding));
+  if ( ASDCP_SUCCESS(result) && DataEssenceCoding.HasValue() ) result = TLVSet.WriteObject(OBJ_WRITE_ARGS(GenericDataEssenceDescriptor, DataEssenceCoding));
   return result;
 }
 
