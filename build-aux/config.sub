@@ -359,9 +359,12 @@ case $basic_machine in
 	i*86 | x86_64)
 	  basic_machine=$basic_machine-pc
 	  ;;
+        x86_64-pc-none)
+          basic_machine=x86_64-pc
+          ;;
 	# Object if more than one company name word.
 	*-*-*)
-		echo Invalid configuration \`$1\': machine \`$basic_machine\' not recognized 1>&2
+		echo Invalid configuration \`$1\': machine 1 \`$basic_machine\' not recognized 1>&2
 		exit 1
 		;;
 	# Recognize the basic CPU types with company name.
@@ -1292,11 +1295,14 @@ case $basic_machine in
 	pmac | pmac-mpw)
 		basic_machine=powerpc-apple
 		;;
+        *)
+                basic_machine=pc
+                ;;
 	*-unknown)
 		# Make sure to match an already-canonicalized machine name.
 		;;
-	*)
-		echo Invalid configuration \`$1\': machine \`$basic_machine\' not recognized 1>&2
+	*-*-*)
+		echo Invalid configuration \`$1\': machine 2 \`$basic_machine\' not recognized 1>&2
 		exit 1
 		;;
 esac
