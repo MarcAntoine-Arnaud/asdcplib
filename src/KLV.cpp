@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    KLV.cpp
-  \version $Id: KLV.cpp,v 1.17 2016/05/16 21:56:53 jhurst Exp $
+  \version $Id: KLV.cpp,v 1.18 2018/08/06 22:07:03 jhurst Exp $
   \brief   KLV objects
 */
 
@@ -172,7 +172,7 @@ ASDCP::KLVPacket::Dump(FILE* stream, const Dictionary& Dict, bool show_value)
       fprintf(stream, "%s", TmpUL.EncodeString(buf, 64));
 
       const MDDEntry* Entry = Dict.FindULAnyVersion(m_KeyStart);
-      fprintf(stream, "  len: %7qu (%s)\n", m_ValueLength, (Entry ? Entry->name : "Unknown"));
+      fprintf(stream, "  len: %7llu (%s)\n", m_ValueLength, (Entry ? Entry->name : "Unknown"));
 
       if ( show_value && m_ValueLength < 1000 )
 	Kumu::hexdump(m_ValueStart, Kumu::xmin(m_ValueLength, (ui64_t)128), stream);

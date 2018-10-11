@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02_JP2K.cpp
-  \version $Id: AS_02_JP2K.cpp,v 1.16 2016/12/01 20:12:37 jhurst Exp $
+  \version $Id: AS_02_JP2K.cpp,v 1.18 2018/08/20 00:15:11 jhurst Exp $
   \brief   AS-02 library, JPEG 2000 essence reader and writer implementation
 */
 
@@ -68,7 +68,7 @@ public:
 Result_t
 AS_02::JP2K::MXFReader::h__Reader::OpenRead(const std::string& filename)
 {
-  Result_t result = OpenMXFRead(filename.c_str());
+  Result_t result = OpenMXFRead(filename);
 
   if( KM_SUCCESS(result) )
     {
@@ -368,6 +368,7 @@ AS_02::JP2K::MXFWriter::h__Writer::SetSourceStream(const std::string& label, con
       if ( KM_SUCCESS(result) )
 	{
 	  this->m_IndexWriter.SetPrimerLookup(&this->m_HeaderPart.m_Primer);
+	  this->m_IndexWriter.SetEditRate(m_EssenceDescriptor->SampleRate);
 	}
     }
 

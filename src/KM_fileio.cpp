@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
   /*! \file    KM_fileio.cpp
-    \version $Id: KM_fileio.cpp,v 1.47 2016/12/03 21:26:24 jhurst Exp $
+    \version $Id: KM_fileio.cpp,v 1.48 2016/12/22 06:42:03 tmccolm Exp $
     \brief   portable file i/o
   */
 
@@ -666,7 +666,7 @@ Kumu::GetExecutablePath(const std::string& default_path)
   // This fails if the CWD changes after the program has started but before the
   // call to GetExecutablePath(). For least surprise, call GetExecutablePath()
   // immediately in main() and save the value for later use.
-  const,  char* p = getenv("_");
+  const  char* p = getenv("_");
   if ( p )
     {
       return Kumu::PathMakeAbsolute(p);

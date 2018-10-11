@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2018, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    AS_02.h
-    \version $Id: AS_02.h,v 1.25 2016/12/02 18:45:14 jhurst Exp $       
+    \version $Id: AS_02.h,v 1.28 2018/08/06 22:58:44 jhurst Exp $       
     \brief   AS-02 library, public interface
 
 This module implements MXF AS-02 is a set of file access objects that
@@ -367,12 +367,16 @@ namespace AS_02
 
 	  // Opens an XML file for reading, parses data to provide a complete
 	  // set of stream metadata for the MXFWriter below.
-	  Result_t OpenRead(const std::string& filename, const std::string& profile_name) const;
+	  Result_t OpenRead(const std::string& filename) const;
 
 	  // Parse an XML string 
-	  Result_t OpenRead(const std::string& xml_doc, const std::string& filename,
-			    const std::string& profile_name) const;
+	  Result_t OpenRead(const std::string& xml_doc, const std::string& filename) const;
 
+	  // The "profile_name" parameter was removed from OpenRead() because it made the API
+	  // awkward WRT lexical compatibility with TimedText_Parser. The value can still be
+	  // modified by changing the descriptor's NamespaceName property after the call to
+	  // FillTimedTextDescriptor() has set it.
+			      
 	  // Fill a TimedTextDescriptor struct with the values from the file's contents.
 	  // Returns RESULT_INIT if the file is not open.
 	  Result_t FillTimedTextDescriptor(ASDCP::TimedText::TimedTextDescriptor&) const;
@@ -494,7 +498,103 @@ namespace AS_02
 	};
     } // namespace TimedText
 
+  namespace ISXD
+  { 
+    //
+    class MXFWriter
+    {
+      class h__Writer;
+      ASDCP::mem_ptr<h__Writer> m_Writer;
+      ASDCP_NO_COPY_CONSTRUCT(MXFWriter);
+      
+    public:
+      MXFWriter();
+      virtual ~MXFWriter();
 
+      // Warning: direct manipulation of MXF structures can interfere
+      // with the normal operation of the wrapper.  Caveat emptor!
+      virtual ASDCP::MXF::OP1aHeader& OP1aHeader();
+      virtual ASDCP::MXF::RIP& RIP();
+
+      // Open the file for writing. The file must not exist. Returns error if
+      // the operation cannot be completed or if nonsensical data is discovered
+      // in the essence descriptor.
+      Result_t OpenWrite(const std::string& filename, const ASDCP::WriterInfo&,
+			 const std::string& isxd_document_namespace,
+			 const ASDCP::Rational& edit_rate, const ui32_t& header_size = 16384,
+			 const IndexStrategy_t& strategy = IS_FOLLOW, const ui32_t& partition_space = 10);
+
+      // Writes a frame of essence to the MXF file. If the optional AESEncContext
+      // argument is present, the essence is encrypted prior to writing.
+      // Fails if the file is not open, is finalized, or an operating system
+      // error occurs.
+      Result_t WriteFrame(const ASDCP::FrameBuffer&, ASDCP::AESEncContext* = 0, ASDCP::HMACContext* = 0);
+
+      // Writes an XML text document to the MXF file as per RP 2067. If the
+      // optional AESEncContext argument is present, the document is encrypted
+      // prior to writing. Fails if the file is not open, is finalized, or an
+      // operating system error occurs.
+      Result_t AddDmsGenericPartUtf8Text(const ASDCP::FrameBuffer& frame_buffer, ASDCP::AESEncContext* enc = 0, ASDCP::HMACContext* hmac = 0);
+
+      // Closes the MXF file, writing the index and revised header.
+      Result_t Finalize();
+    };
+
+    //
+    class MXFReader
+    {
+      class h__Reader;
+      ASDCP::mem_ptr<h__Reader> m_Reader;
+      ASDCP_NO_COPY_CONSTRUCT(MXFReader);
+
+    public:
+      MXFReader();
+      virtual ~MXFReader();
+
+      // Warning: direct manipulation of MXF structures can interfere
+      // with the normal operation of the wrapper.  Caveat emptor!
+      virtual ASDCP::MXF::OP1aHeader& OP1aHeader();
+      virtual AS_02::MXF::AS02IndexReader& AS02IndexReader();
+      virtual ASDCP::MXF::RIP& RIP();
+
+      // Open the file for reading. The file must exist. Returns error if the
+      // operation cannot be completed.
+      Result_t OpenRead(const std::string& filename) const;
+
+      // Open the file for reading. The file must exist. Returns error if the
+      // operation cannot be completed. If global metadata is available it will
+      // be placed into the buffer object passed as the second argument.
+      Result_t OpenRead(const std::string& filename, ASDCP::FrameBuffer& global_metadata) const;
+
+      // Returns RESULT_INIT if the file is not open.
+      Result_t Close() const;
+
+      // Fill a WriterInfo struct with the values from the file's header.
+      // Returns RESULT_INIT if the file is not open.
+      Result_t FillWriterInfo(ASDCP::WriterInfo&) const;
+
+      // Reads a frame of essence from the MXF file. If the optional AESEncContext
+      // argument is present, the essence is decrypted after reading. If the MXF
+      // file is encrypted and the AESDecContext argument is NULL, the frame buffer
+      // will contain the ciphertext frame data. If the HMACContext argument is
+      // not NULL, the HMAC will be calculated (if the file supports it).
+      // Returns RESULT_INIT if the file is not open, failure if the frame number is
+      // out of range, or if optional decrypt or HAMC operations fail.
+      Result_t ReadFrame(ui32_t frame_number, ASDCP::FrameBuffer&,
+			 ASDCP::AESDecContext* = 0, ASDCP::HMACContext* = 0) const;
+
+      // Reads a Generic Stream Partition payload. Returns RESULT_INIT if the file is
+      // not open, or RESULT_FORMAT if the SID is not present in the  RIP, or if the
+      // actual partition at ByteOffset does not have a matching BodySID value.
+      // Encryption is not currently supported.
+      Result_t ReadGenericStreamPartitionPayload(ui32_t SID, ASDCP::FrameBuffer& FrameBuf);
+  
+      // Print debugging information to stream
+      void     DumpHeaderMetadata(FILE* = 0) const;
+      void     DumpIndex(FILE* = 0) const;
+    };
+    
+  }
 
 } // namespace AS_02
 

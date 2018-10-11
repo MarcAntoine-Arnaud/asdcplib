@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2006-2016, John Hurst
+Copyright (c) 2006-2018, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    MDD.[h|cpp]
-    \version $Id: MDD.h,v 1.41 2016/12/10 21:55:07 jhurst Exp $
+    \version $Id: MDD.h,v 1.47 2018/09/14 07:27:20 jhurst Exp $
     \brief   MXF Metadata Dictionary
 */
 
@@ -278,7 +278,7 @@ namespace ASDCP {
         MDD_JPEG2000PictureSubDescriptor_PictureComponentSizing,  // 240
         MDD_JPEG2000PictureSubDescriptor_CodingStyleDefault,  // 241
         MDD_JPEG2000PictureSubDescriptor_QuantizationDefault,  // 242
-        MDD_DM_Framework,  // 243
+        MDD_DescriptiveFramework,  // 243
         MDD_DM_Set,  // 244
         MDD_EncryptedContainerLabel,  // 245
         MDD_CryptographicFrameworkLabel,  // 246
@@ -395,8 +395,8 @@ namespace ASDCP {
 	MDD_JP2KEssenceCompression_BroadcastProfile_5, // 357
 	MDD_JP2KEssenceCompression_BroadcastProfile_6, // 358
 	MDD_JP2KEssenceCompression_BroadcastProfile_7, // 359
-	MDD_WaveAudioDescriptor_ReferenceImageEditRate, // 360
-	MDD_WaveAudioDescriptor_ReferenceAudioAlignmentLevel, // 361
+	MDD_GenericSoundEssenceDescriptor_ReferenceImageEditRate, // 360
+	MDD_GenericSoundEssenceDescriptor_ReferenceAudioAlignmentLevel, // 361
 	MDD_GenericPictureEssenceDescriptor_AlternativeCenterCuts, // 362
 	MDD_GenericPictureEssenceDescriptor_ActiveHeight, // 363
 	MDD_GenericPictureEssenceDescriptor_ActiveWidth, // 364
@@ -429,18 +429,18 @@ namespace ASDCP {
 	MDD_MCALabelSubDescriptor_MCAAudioElementKind, // 391
 	MDD_MXFGCI1FrameWrappedPictureElement, // 392
 	MDD_MXFGCP1FrameWrappedPictureElement, // 393
-	MDD_TransferCharacteristics_709, // 394
-	MDD_TransferCharacteristics_2020,  // 395
-	MDD_TransferCharacteristics_xvYCC, // 396
-	MDD_TransferCharacteristics_St2084, // 397
-	MDD_TransferCharacteristics_linear, // 398
+	MDD_TransferCharacteristic_ITU709, // 394
+	MDD_TransferCharacteristic_ITU2020,  // 395
+	MDD_TransferCharacteristic_IEC6196624_xvYCC, // 396
+	MDD_TransferCharacteristic_SMPTEST2084, // 397
+	MDD_TransferCharacteristic_linear, // 398
 	MDD_CodingEquations_601, // 399
 	MDD_CodingEquations_709, // 400
 	MDD_CodingEquations_Rec2020, // 401
-	MDD_ColorPrimaries_BT709, // 402
-	MDD_ColorPrimaries_BT2020, // 403
+	MDD_ColorPrimaries_ITU709, // 402
+	MDD_ColorPrimaries_ITU2020, // 403
 	MDD_ColorPrimaries_P3D65, // 404
-	MDD_ColorPrimaries_XYZ, // 405
+	MDD_ColorPrimaries_ACES, // 405
 	MDD_GenericPictureEssenceDescriptor_MasteringDisplayPrimaries, // 406
 	MDD_GenericPictureEssenceDescriptor_MasteringDisplayWhitePointChromaticity, // 407
 	MDD_GenericPictureEssenceDescriptor_MasteringDisplayMaximumLuminance, // 408
@@ -503,8 +503,57 @@ namespace ASDCP {
 	MDD_PIMFDynamicMetadataEssence, // 465
 	MDD_PIMFDynamicMetadataDescriptor, // 466
 	MDD_PIMFDynamicMetadataDescriptor_GlobalPayloadSID, // 467
-	
-        MDD_Max
+	MDD_ColorPrimaries_ITU470_PAL, // 468
+	MDD_ColorPrimaries_SMPTE170M, // 469
+	MDD_ACESPictureSubDescriptor, //  470
+	MDD_ACESPictureSubDescriptor_ACESAuthoringInformation, //  471
+	MDD_ACESPictureSubDescriptor_ACESMasteringDisplayPrimaries, // 472
+	MDD_ACESPictureSubDescriptor_ACESMasteringDisplayWhitePointChromaticity, // 473
+	MDD_ACESPictureSubDescriptor_ACESMasteringDisplayMaximumLuminance, // 474
+	MDD_ACESPictureSubDescriptor_ACESMasteringDisplayMinimumLuminance, // 475
+	MDD_TargetFrameSubDescriptor, //  476
+	MDD_TargetFrameSubDescriptor_TargetFrameAncillaryResourceID, // 477
+	MDD_TargetFrameSubDescriptor_MediaType, // 478
+	MDD_TargetFrameSubDescriptor_TargetFrameIndex, // 479
+	MDD_TargetFrameSubDescriptor_TargetFrameTransferCharacteristic, // 480
+	MDD_TargetFrameSubDescriptor_TargetFrameColorPrimaries, // 481
+	MDD_TargetFrameSubDescriptor_TargetFrameComponentMaxRef, // 482
+	MDD_TargetFrameSubDescriptor_TargetFrameComponentMinRef, // 483
+	MDD_TargetFrameSubDescriptor_TargetFrameEssenceStreamID, // 484
+	MDD_TargetFrameSubDescriptor_ACESPictureSubDescriptorInstanceID, // 485
+	MDD_TargetFrameSubDescriptor_TargetFrameViewingEnvironment, // 486
+	MDD_TransferCharacteristic_Gamma_2_6, // 487
+	MDD_TransferCharacteristic_sRGB, // 488
+	MDD_TheatricalViewingEnvironment, // 489
+	MDD_HDTVReferenceViewingEnvironment, // 490
+	MDD_HDRReferenceViewingEnvironment, // 491
+	MDD_FrameWrappedISXDData, // 492
+	MDD_FrameWrappedISXDContainer, // 493
+	MDD_ISXDDataEssenceDescriptor, // 494
+	MDD_ISXDDataEssenceDescriptor_NamespaceURI, // 495
+	MDD_UTF_8_Text_DataEssenceCoding, // 496
+	MDD_TextBasedDMFramework, // 497
+	MDD_TextBasedDMFramework_ObjectRef, // 498
+	MDD_TextBasedObject, // 499
+	MDD_TextBasedObject_PayloadSchemeID, // 500
+	MDD_TextBasedObject_TextMIMEMediaType, // 501
+	MDD_TextBasedObject_RFC5646TextLanguageCode, // 502
+	MDD_TextBasedObject_TextDataDescription, // 503
+	MDD_GenericStreamTextBasedSet, // 504
+	MDD_GenericStreamTextBasedSet_GenericStreamSID, // 505
+	MDD_DescriptiveObject,   // 506
+	MDD_DescriptiveFramework_LinkedDescriptiveFrameworkPlugInId, // 507
+	MDD_DescriptiveObject_LinkedDescriptiveObjectPlugInId, // 508
+	MDD_Preface_ApplicationSchemes,  // 509
+	MDD_Preface_ConformsToSpecifications, // 510
+	MDD_MXFTextBasedFramework,  // 511
+	MDD_ColorPrimaries_SMPTE_DCDM, // 512
+	MDD_ColorPrimaries_CinemaMezzanine, // 513
+	MDD_MXFGCFrameWrappedACESPictures, // 514
+	MDD_ACESUncompressedMonoscopicWithoutAlpha, // 515
+	MDD_ACESUncompressedMonoscopicWithAlpha, // 516
+	MDD_ACESFrameWrappedEssence, // 517
+    MDD_Max
     }; // enum MDD_t
 
     //

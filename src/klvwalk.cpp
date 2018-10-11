@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2005-2016, John Hurst
+Copyright (c) 2005-2018, John Hurst
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    klvwalk.cpp
-    \version $Id: klvwalk.cpp,v 1.24 2016/05/09 18:18:42 jhurst Exp $
+    \version $Id: klvwalk.cpp,v 1.25 2018/08/06 22:07:03 jhurst Exp $
     \brief   KLV+MXF test
 */
 
@@ -341,7 +341,7 @@ main(int argc, const char** argv)
 	  
 	  while ( ASDCP_SUCCESS(result) )
 	    {
-	      fprintf(stdout, "@0x%08qx: ", pos);
+	      fprintf(stdout, "@0x%08llx: ", pos);
 	      KP.Dump(stdout, DefaultCompositeDict(), true);
 	      pos = Reader.Tell();
 	      result = KP.InitFromFile(Reader);

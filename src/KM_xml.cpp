@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    KM_xml.cpp
-    \version $Id: KM_xml.cpp,v 1.28 2015/08/25 19:03:38 jhurst Exp $
+    \version $Id: KM_xml.cpp,v 1.29 2018/02/03 19:41:49 jhurst Exp $
     \brief   XML writer
 */
 
@@ -912,7 +912,11 @@ public:
     m_Scope.pop();
   }
 
+#if XERCES_VERSION_MAJOR < 3
   void characters(const XMLCh *const chars, const unsigned int length)
+#else
+  void characters(const XMLCh* const chars, const XMLSize_t length)
+#endif
   {
     if ( length > 0 )
       {

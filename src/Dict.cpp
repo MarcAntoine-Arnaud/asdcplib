@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    Dict.cpp
-  \version $Id: Dict.cpp,v 1.17 2016/05/16 21:56:53 jhurst Exp $
+  \version $Id: Dict.cpp,v 1.18 2018/08/06 22:07:03 jhurst Exp $
   \brief   MXF dictionary
 */
 
@@ -201,7 +201,7 @@ ASDCP::Dictionary::AddEntry(const MDDEntry& Entry, ui32_t index)
   std::map<ASDCP::UL, ui32_t>::iterator ii = m_md_lookup.find(TmpUL);
   if ( ii != m_md_lookup.end() )
     {
-      fprintf(stderr, "DUPE! %s (%02x, %02x) %s | (%02x, %02x) %s\n",
+      Kumu::DefaultLogSink().Warn("Duplicate Dictionary item: %s (%02x, %02x) %s | (%02x, %02x) %s\n",
 	      TmpUL.EncodeString(buf, 64),
 	      m_MDD_Table[ii->second].tag.a, m_MDD_Table[ii->second].tag.b,
 	      m_MDD_Table[ii->second].name,

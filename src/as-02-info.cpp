@@ -25,7 +25,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /*! \file    as-02-info.cpp
-    \version $Id: as-02-info.cpp,v 1.3 2016/05/06 18:40:34 jhurst Exp $
+    \version $Id: as-02-info.cpp,v 1.5 2018/09/14 07:27:20 jhurst Exp $
     \brief   AS-02 file metadata utility
 
   This program provides metadata information about an AS-02 file.
@@ -38,6 +38,8 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <AS_DCP.h>
 #include <AS_02.h>
 #include <JP2K.h>
+#include <AS_02_ACES.h>
+#include <ACES.h>
 #include <MXF.h>
 #include <Metadata.h>
 #include <cfloat>
@@ -347,12 +349,114 @@ class MyPictureDescriptor : public JP2K::PictureDescriptor
 	fprintf(stream, "          Precincts: %u\n", precinct_set_size);
 	fprintf(stream, "precinct dimensions:\n");
 
-	for ( int i = 0; i < precinct_set_size && i < JP2K::MaxPrecincts; i++ )
+	for ( unsigned int i = 0; i < precinct_set_size && i < JP2K::MaxPrecincts; i++ )
 	  fprintf(stream, "    %d: %d x %d\n", i + 1,
 		  s_exp_lookup[coding_style_default.SPcod.PrecinctSize[i]&0x0f],
 		  s_exp_lookup[(coding_style_default.SPcod.PrecinctSize[i]>>4)&0x0f]
 		  );
       }
+  }
+};
+
+class MyACESPictureDescriptor : public AS_02::ACES::PictureDescriptor
+{
+  RGBAEssenceDescriptor *m_RGBADescriptor;
+  std::list<ACESPictureSubDescriptor*> m_ACESPictureSubDescriptorList;
+  std::list<TargetFrameSubDescriptor*> m_TargetFrameSubDescriptorList;
+
+ public:
+  MyACESPictureDescriptor() :
+    m_RGBADescriptor(0) {}
+
+  void FillDescriptor(AS_02::ACES::MXFReader& Reader)
+  {
+    m_RGBADescriptor = get_descriptor_by_type<AS_02::ACES::MXFReader, RGBAEssenceDescriptor>
+      (Reader, DefaultCompositeDict().ul(MDD_RGBAEssenceDescriptor));
+
+    if ( m_RGBADescriptor != 0 )
+      {
+    	SampleRate = m_RGBADescriptor->SampleRate;
+    	ContainerDuration = m_RGBADescriptor->ContainerDuration;
+      }
+    else
+      {
+	DefaultLogSink().Error("Picture descriptor not found.\n");
+      }
+
+    std::list<InterchangeObject*> object_list;
+    Reader.OP1aHeader().GetMDObjectsByType(DefaultCompositeDict().ul(MDD_ACESPictureSubDescriptor), object_list);
+
+    std::list<InterchangeObject*>::iterator i = object_list.begin();
+    for ( ; i != object_list.end(); ++i )
+      {
+    	ACESPictureSubDescriptor *p = dynamic_cast<ACESPictureSubDescriptor*>(*i);
+
+	if ( p )
+	  {
+		m_ACESPictureSubDescriptorList.push_back(p);
+	  }
+	else
+	  {
+	    char buf[64];
+	    DefaultLogSink().Error("ACESPictureSubDescriptor type error.\n", (**i).InstanceUID.EncodeHex(buf, 64));
+	  }
+      }
+
+    object_list.clear();
+
+    Reader.OP1aHeader().GetMDObjectsByType(DefaultCompositeDict().ul(MDD_TargetFrameSubDescriptor), object_list);
+
+    i = object_list.begin();
+    for ( ; i != object_list.end(); ++i )
+      {
+    	TargetFrameSubDescriptor *p = dynamic_cast<TargetFrameSubDescriptor*>(*i);
+
+	if ( p )
+	  {
+		m_TargetFrameSubDescriptorList.push_back(p);
+	  }
+	else
+	  {
+	    char buf[64];
+	    DefaultLogSink().Error("TargetFrameSubDescriptor type error.\n", (**i).InstanceUID.EncodeHex(buf, 64));
+	  }
+      }
+
+    object_list.clear();
+
+    Reader.OP1aHeader().GetMDObjectsByType(DefaultCompositeDict().ul(MDD_Track), object_list);
+
+    if ( object_list.empty() )
+      {
+	DefaultLogSink().Error("MXF Metadata contains no Track Sets.\n");
+      }
+
+    EditRate = ((Track*)object_list.front())->EditRate;
+  }
+
+  void MyDump(FILE* stream) {
+    if ( stream == 0 )
+      {
+	stream = stderr;
+      }
+
+    if ( m_RGBADescriptor != 0 )
+      {
+	m_RGBADescriptor->Dump(stream);
+      }
+    else
+      {
+	return;
+      }
+
+	for ( std::list<ACESPictureSubDescriptor*>::iterator i = m_ACESPictureSubDescriptorList.begin(); i != m_ACESPictureSubDescriptorList.end(); ++i )
+	{
+	  (*i)->Dump(stream);
+	}
+	for ( std::list<TargetFrameSubDescriptor*>::iterator i = m_TargetFrameSubDescriptorList.begin(); i != m_TargetFrameSubDescriptorList.end(); ++i )
+	{
+	  (*i)->Dump(stream);
+	}
   }
 };
 
@@ -487,6 +591,12 @@ init_rate_info()
 
   rate_ul = DefaultCompositeDict().ul(MDD_JP2KEssenceCompression_BroadcastProfile_7);
   g_rate_info.insert(rate_info_map::value_type(rate_ul, RateInfo(rate_ul, DBL_MAX, "ISO/IEC 15444-1 Amendment 3 Level 7")));
+
+  rate_ul = DefaultCompositeDict().ul(MDD_ACESUncompressedMonoscopicWithoutAlpha);
+  g_rate_info.insert(rate_info_map::value_type(rate_ul, RateInfo(rate_ul, DBL_MAX, "ST 2065-5")));
+
+  rate_ul = DefaultCompositeDict().ul(MDD_ACESUncompressedMonoscopicWithAlpha);
+  g_rate_info.insert(rate_info_map::value_type(rate_ul, RateInfo(rate_ul, DBL_MAX, "ST 2065-5")));
 }
 
 
@@ -539,7 +649,7 @@ public:
 		( m_WriterInfo.LabelSetType == LS_MXF_SMPTE ? "SMPTE 2067-5" : "Unknown" ),
 		type_string,
 		(m_Desc.ContainerDuration != 0 ? m_Desc.ContainerDuration : m_Reader.AS02IndexReader().GetDuration()),
-		(m_Desc.ContainerDuration == 1 ? "":"s"));
+		(m_Desc.ContainerDuration == (ui64_t)1 ? "":"s"));
 
 	if ( Options.showheader_flag )
 	  {
@@ -681,7 +791,7 @@ public:
 		total_frame_bytes += this_frame_size;
 
 		if ( this_frame_size > largest_frame )
-		  largest_frame = this_frame_size;
+		  largest_frame = (ui32_t)this_frame_size;
 	      }
 
 	    last_stream_offset = entry.StreamOffset;
@@ -694,7 +804,7 @@ public:
 	static const double mega_const = 1.0 / ( 1000000 / 8.0 );
 
 	// we did not accumulate the last, so duration -= 1
-	double avg_bytes_frame = total_frame_bytes / ( duration - 1 );
+	double avg_bytes_frame = (double)(total_frame_bytes / ( duration - 1 ));
 
 	m_MaxBitrate = largest_frame * mega_const * m_Desc.EditRate.Quotient();
 	m_AvgBitrate = avg_bytes_frame * mega_const * m_Desc.EditRate.Quotient();
@@ -763,6 +873,30 @@ show_file_info(CommandOptions& Options)
 	    }
     }
 
+  else if ( EssenceType == ESS_AS02_ACES )
+    {
+	  FileInfoWrapper<AS_02::ACES::MXFReader, MyACESPictureDescriptor> wrapper;
+	  result = wrapper.file_info(Options, "ACES pictures");
+
+	  if ( KM_SUCCESS(result) )
+	    {
+	      wrapper.get_PictureEssenceCoding();
+	      wrapper.calc_Bitrate(stdout);
+
+	      if ( Options.showcoding_flag )
+		{
+		  wrapper.dump_PictureEssenceCoding(stdout);
+		}
+
+	      if ( Options.showrate_flag )
+		{
+		  wrapper.dump_Bitrate(stdout);
+		}
+
+	      result = wrapper.test_rates(Options, stdout);
+	    }
+    }
+
   else if ( EssenceType == ESS_AS02_PCM_24b_48k || EssenceType == ESS_AS02_PCM_24b_96k )
     {
       FileInfoWrapper<AS_02::PCM::MXFReader, MyAudioDescriptor> wrapper;
@@ -811,7 +945,6 @@ int
 main(int argc, const char** argv)
 {
   Result_t result = RESULT_OK;
-  char     str_buf[64];
   CommandOptions Options(argc, argv);
 
   if ( Options.version_flag )

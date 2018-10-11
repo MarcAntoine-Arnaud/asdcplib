@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011-2016, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
+Copyright (c) 2011-2018, Robert Scheler, Heiko Sparenberg Fraunhofer IIS,
 John Hurst
 
 All rights reserved.
@@ -27,7 +27,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */ 
 /*! \file    h__02_Reader.cpp
-  \version $Id: h__02_Reader.cpp,v 1.19 2016/11/22 17:58:19 jhurst Exp $
+  \version $Id: h__02_Reader.cpp,v 1.20 2018/08/06 22:07:03 jhurst Exp $
   \brief   MXF file reader base class
 */
 
@@ -93,7 +93,7 @@ AS_02::MXF::AS02IndexReader::InitFromFile(const Kumu::FileReader& reader, const 
 	}
       else if ( i->BodySID != first_body_sid )
 	{
-	  DefaultLogSink().Debug("The index assembler is ignoring BodySID %d.\n", i->BodySID);
+	  //	  DefaultLogSink().Debug("The index assembler is ignoring BodySID %d.\n", i->BodySID);
 	  continue;
 	}
 
@@ -411,7 +411,6 @@ AS_02::h__AS02Reader::OpenMXFRead(const std::string& filename)
     {
       //
       UL OP1a_ul(m_Dict->ul(MDD_OP1a));
-      InterchangeObject* Object;
       m_Info.LabelSetType = LS_MXF_SMPTE;
 
       if ( m_HeaderPart.OperationalPattern != OP1a_ul )

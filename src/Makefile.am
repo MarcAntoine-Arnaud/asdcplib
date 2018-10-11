@@ -1,8 +1,8 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 #
-# $Id: Makefile.am,v 1.91 2016/12/01 20:12:37 jhurst Exp $
+# $Id: Makefile.am,v 1.98 2018/09/14 07:27:20 jhurst Exp $
 #
-# Copyright (c) 2007-2016 John Hurst. All rights reserved.
+# Copyright (c) 2007-2018 John Hurst. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -72,8 +72,10 @@ include_HEADERS += \
 	PCMDataProviders.h \
 	SyncCommon.h \
 	SyncEncoder.h \
-	UUIDInformation.h 
-
+	UUIDInformation.h \
+	WavFileWriter.h \
+	AS_DCP_internal.h \
+	AS_DCP_DCData_internal.h
 
 endif
 
@@ -139,12 +141,19 @@ if USE_AS_02
 libas02_la_SOURCES	= \
 	AS_02.h \
 	AS_02_internal.h \
+	ACES.h \
+	AS_02_ACES.h \
 	h__02_Reader.cpp \
 	h__02_Writer.cpp \
 	AS_02_JP2K.cpp \
 	AS_02_PCM.cpp \
+	AS_02_ISXD.cpp \
 	ST2052_TextParser.cpp \
-	AS_02_TimedText.cpp
+	AS_02_TimedText.cpp \
+	ACES.cpp \
+	ACES_Codestream_Parser.cpp \
+	ACES_Sequence_Parser.cpp \
+	AS_02_ACES.cpp
 
 libas02_la_LDFLAGS = -release @VERSION@
 libas02_la_LIBADD = libasdcp.la libkumu.la
@@ -171,6 +180,7 @@ lib_LTLIBRARIES += libpyasdcp.la
 
 nodist_libpyasdcp_la_SOURCES = \
 	kumu_python.cpp \
+	kumu_python_list.cpp \
 	kumu_python.h \
 	asdcp_python.cpp \
 	asdcp_python.h \
@@ -193,7 +203,7 @@ libpyasdcp_la_LIBADD	+= libas02.la
 endif
 
 pyexecdir = @PYTHON_EXECDIR@
-pyexec_includedir = $(PYTHON_PREFIX)/include/python$(PYTHON_SHORTVERSION)
+pyexec_includedir = $(prefix)/include
 nodist_pyexec_include_HEADERS = kumu_python.h asdcp_python.h asdcp_wrappers.h
 pyexec_LTLIBRARIES = kumu.la asdcp.la
 
