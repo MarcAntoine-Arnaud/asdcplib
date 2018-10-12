@@ -1,0 +1,67 @@
+language: cpp
+
+# Use container-based infrastructure
+sudo: false
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+matrix:
+  allow_failures:
+    # we exceed the time limit
+    - os: osx
+  fast_finish: true
+
+cache:
+  # Enable compiler cache
+  ccache: true
+  # Caching Ubuntu packages
+  apt: true
+  # Caching other directories
+  directories:
+  - ${DEPENDENCIES_INSTALL}
+
+addons:
+  apt:
+    sources: ['kalakris-cmake']
+    packages:
+    - cmake
+    - libxerces-c-dev
+
+before_install:
+  - env | sort
+  - date -u
+  - uname -a
+  - if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
+      lsb_release -a;
+      ccache -s;
+    elif [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
+      sw_vers -productVersion;
+    fi
+
+install:
+  - tools/travis/coverity_env.sh
+  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]]; then
+      exit 0;
+    fi
+  - tools/travis/install_dependencies.sh
+
+script:
+  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]]; then
+      exit 0;
+    fi
+  - tools/travis/build.sh
+
+  # launch tests
+  - if [ ${CC} = "gcc" ]; then tools/travis/launch_tests.sh; fi
+
+# Before uploading the new cache archive
+before_cache:
+  - if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
+      ccache -s;
+    fi
