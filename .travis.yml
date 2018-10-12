@@ -32,7 +32,6 @@ addons:
     packages:
     - cmake
     - libxerces-c-dev
-    - libstdc++
     - openssl
 
 before_install:
