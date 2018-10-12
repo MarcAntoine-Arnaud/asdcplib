@@ -48,6 +48,10 @@ before_install:
     fi
 
 script:
+  - if [[ ${TRAVIS_OS_NAME} == "osx" ]]; then
+      export CPPFLAGS="-I$(brew --prefix openssl)/include";
+      export LDFLAGS="-lcrypto -L$(brew --prefix openssl)/lib";
+    fi
   - ./configure --build=x86_64 --enable-phdr --enable-as-02 --enable-dev-headers
   - make
 
