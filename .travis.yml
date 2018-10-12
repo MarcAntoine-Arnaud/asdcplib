@@ -32,6 +32,8 @@ addons:
     packages:
     - cmake
     - libxerces-c-dev
+    - libstdc++
+    - openssl
 
 before_install:
   - env | sort
@@ -44,21 +46,9 @@ before_install:
       sw_vers -productVersion;
     fi
 
-install:
-  - tools/travis/coverity_env.sh
-  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]]; then
-      exit 0;
-    fi
-  - tools/travis/install_dependencies.sh
-
 script:
-  - if [[ ${COVERITY_BUILD_DISABLED} == 1 ]]; then
-      exit 0;
-    fi
-  - tools/travis/build.sh
-
-  # launch tests
-  - if [ ${CC} = "gcc" ]; then tools/travis/launch_tests.sh; fi
+  - ./configure --build=x86_64 --enable-phdr --enable-as-02 --enable-dev-headers
+  - make
 
 # Before uploading the new cache archive
 before_cache:
